@@ -1,0 +1,33 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3000,
+    "serverName": "unified-mcp",
+    "serverVersion": "1.0.0",
+    "popularTools": ["get_current_weather", "search_wikipedia", "get_top_stories"],
+    "popularToolsCount": 5,
+    "usageFile": "~/.config/awesome-mcp-servers/unified-usage.json"
+  },
+  "api": {
+    "openMeteo": {
+      "geocodingBaseUrl": "https://geocoding-api.open-meteo.com/v1",
+      "forecastBaseUrl": "https://api.open-meteo.com/v1",
+      "timeoutMs": 15000
+    },
+    "restCountries": {
+      "baseUrl": "https://restcountries.com/v3.1",
+      "timeoutMs": 15000
+    },
+    "wikipedia": {
+      "restBaseUrl": "https://en.wikipedia.org/api/rest_v1",
+      "mediaWikiBaseUrl": "https://en.wikipedia.org/w/api.php",
+      "timeoutMs": 15000
+    },
+    "hackerNews": {
+      "firebaseBaseUrl": "https://hacker-news.firebaseio.com/v0",
+      "algoliaBaseUrl": "https://hn.algolia.com/api/v1",
+      "timeoutMs": 15000
+    }
+  }
+}
