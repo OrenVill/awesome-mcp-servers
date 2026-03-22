@@ -9,6 +9,9 @@ import {
 
 import {
   CountriesTools,
+  GET_COUNTRY_DEF,
+  SEARCH_COUNTRIES_DEF,
+  LIST_ALL_COUNTRIES_DEF,
   type GetCountryInput,
   type SearchCountriesInput,
   type ListAllCountriesInput,
@@ -54,21 +57,15 @@ export class MCPServer {
       log(this.config.serverName, 'request', { method: 'tools/list' });
       const tools: Tool[] = [
         {
-          name: 'get_country',
-          description:
-            'Get country info by name or alpha code (e.g. "peru", "pe", "PER"). Returns name, capital, region, population, currencies, languages, etc.',
+          ...GET_COUNTRY_DEF,
           inputSchema: CountriesTools.getGetCountrySchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'search_countries',
-          description:
-            'Search countries by region, subregion, or capital. Returns a list of matching countries with name and codes.',
+          ...SEARCH_COUNTRIES_DEF,
           inputSchema: CountriesTools.getSearchCountriesSchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'list_all_countries',
-          description:
-            'List all countries with optional fields filter. Use fields param to limit response (max 10 fields, e.g. name,cca2,cca3,capital,region).',
+          ...LIST_ALL_COUNTRIES_DEF,
           inputSchema: CountriesTools.getListAllCountriesSchema().inputSchema as Tool['inputSchema'],
         },
       ];
