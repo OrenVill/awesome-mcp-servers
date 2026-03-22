@@ -5,6 +5,6 @@
     "servers/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present"
+    "build": "npm run build -w open-meteo-mcp && npm run build -w rest-countries-mcp && npm run build -w wikipedia-mcp && npm run build -w hacker-news-mcp && npm run build -w unified-mcp"
   }
 }
