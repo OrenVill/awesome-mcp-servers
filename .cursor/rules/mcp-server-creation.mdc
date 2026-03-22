@@ -113,6 +113,23 @@ Errors: `createMCPErrorResult(MCPErrorCode.XXX, message)` → same shape.
 
 ---
 
+## Logging
+
+Log to stderr (stdout is used for stdio transport). Include server name prefix. Log these events:
+
+| Event | Log | Example |
+|-------|-----|---------|
+| Transport started | `[server] transport ready` | stdio ready, HTTP listening |
+| Client connected | `[server] session initialized {sessionId}` | HTTP session created |
+| Session closed | `[server] session closed {sessionId}` | Client disconnected |
+| Request received | `[server] request {method} {path}` | POST /mcp, GET /mcp |
+| Tool called | `[server] tool {name} args={...}` | tools/call with name and args |
+| Tool result | `[server] tool {name} ok` or `[server] tool {name} error {msg}` | success or failure |
+
+Use `console.error` or a logger. Keep args logged short (truncate if large).
+
+---
+
 ## Startup & Shutdown
 
 1. `initialize()` — init tool services (e.g., API clients, cache).
@@ -157,3 +174,4 @@ if (mcpConfig.enabled) {
 - [ ] Tool responses as `{ content: [{ type: 'text', text }] }`
 - [ ] Exhaustive switch on tool name, throw for unknown
 - [ ] `initialize` / `cleanup` for tools with external deps
+- [ ] Logging: connection, request, tool call, session init/close
