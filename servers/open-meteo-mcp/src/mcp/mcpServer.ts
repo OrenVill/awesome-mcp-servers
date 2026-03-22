@@ -13,27 +13,31 @@ import {
   type GetCurrentWeatherInput,
   type GetForecastInput,
 } from './tools/weatherTools.js';
-import { MCPServerConfig } from './types/mcpTypes.js';
+import type { MCPServerConfig } from './types/mcpTypes.js';
 import express from 'express';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
 
 export class MCPServer {
-  private server: Server;
   private geocodingTools: GeocodingTools;
   private weatherTools: WeatherTools;
   private config: MCPServerConfig;
+  private server?: Server;
   private httpApp?: express.Application;
   private httpServer?: ReturnType<express.Application['listen']>;
   private transports: Map<string, StreamableHTTPServerTransport> = new Map();
 
   constructor(config: MCPServerConfig) {
     this.config = config;
+    this.geocodingTools = new GeocodingTools();
+    this.weatherTools = new WeatherTools();
+  }
 
-    this.server = new Server(
+  private createServerWithHandlers(): Server {
+    const server = new Server(
       {
-        name: config.serverName,
-        version: config.serverVersion,
+        name: this.config.serverName,
+        version: this.config.serverVersion,
       },
       {
         capabilities: {
@@ -42,14 +46,7 @@ export class MCPServer {
       }
     );
 
-    this.geocodingTools = new GeocodingTools();
-    this.weatherTools = new WeatherTools();
-
-    this.setupHandlers();
-  }
-
-  private setupHandlers(): void {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+    server.setRequestHandler(ListToolsRequestSchema, async () => {
       const tools: Tool[] = [
         {
           name: 'search_locations',
@@ -74,7 +71,7 @@ export class MCPServer {
       return { tools };
     });
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       const safeArgs = (args ?? {}) as Record<string, unknown>;
 
@@ -105,6 +102,8 @@ export class MCPServer {
         throw error;
       }
     });
+
+    return server;
   }
 
   async initialize(): Promise<void> {
@@ -117,6 +116,7 @@ export class MCPServer {
     }
 
     console.error('MCP Server: Starting stdio transport...');
+    this.server = this.createServerWithHandlers();
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('MCP Server: stdio transport ready');
@@ -166,6 +166,7 @@ export class MCPServer {
         const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
         if (req.method === 'POST' && (req.body as { method?: string })?.method === 'initialize') {
+          const sessionServer = this.createServerWithHandlers();
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (sid) => {
@@ -175,7 +176,7 @@ export class MCPServer {
               this.transports.delete(sid);
             },
           });
-          await this.server.connect(transport);
+          await sessionServer.connect(transport);
         } else if (sessionId && this.transports.has(sessionId)) {
           transport = this.transports.get(sessionId)!;
         } else {
@@ -251,19 +252,4 @@ export async function createMCPServer(config: MCPServerConfig): Promise<MCPServe
   const server = new MCPServer(config);
   await server.start();
   return server;
-}
-
-export function getDefaultMCPConfig(): MCPServerConfig {
-  const transport = process.env.MCP_TRANSPORT ?? 'both';
-
-  return {
-    enabled: process.env.ENABLE_MCP_SERVER !== 'false',
-    transports: {
-      stdio: transport === 'stdio' || transport === 'both',
-      http: transport === 'http' || transport === 'both',
-    },
-    httpPort: parseInt(process.env.MCP_HTTP_PORT ?? '3001', 10),
-    serverName: process.env.MCP_SERVER_NAME ?? 'open-meteo-mcp',
-    serverVersion: process.env.MCP_SERVER_VERSION ?? '1.0.0',
-  };
 }

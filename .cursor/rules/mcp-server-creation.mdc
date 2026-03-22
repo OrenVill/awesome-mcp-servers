@@ -13,15 +13,19 @@ Use this rule when creating or modifying MCP servers. Each server should be **on
 ## Project Structure
 
 ```
-src/
-├── mcp/
-│   ├── mcpServer.ts          # Main server: dual transport, handlers
-│   ├── types/
-│   │   └── mcpTypes.ts       # MCPServerConfig, schemas, result types
-│   └── tools/
-│       └── *Tools.ts         # One file per tool group (e.g., searchTools.ts)
-├── services/                 # API client logic (outside MCP)
-└── app.ts                    # Entry: dotenv, express, MCP server bootstrap
+server-root/
+├── README.md                 # Server-specific docs: tools, config, Cursor setup
+├── config.json               # Default config (env vars override)
+├── src/
+│   ├── config.ts             # Loads config.json, applies env overrides
+│   ├── mcp/
+│   │   ├── mcpServer.ts      # Main server: dual transport, handlers
+│   │   ├── types/
+│   │   │   └── mcpTypes.ts   # MCPServerConfig, schemas, result types
+│   │   └── tools/
+│   │       └── *Tools.ts     # One file per tool group
+│   ├── services/             # API client logic (outside MCP)
+│   └── app.ts                # Entry: dotenv, config, MCP bootstrap
 ```
 
 ---
@@ -66,23 +70,24 @@ export class ExampleTools {
 
 ---
 
-## Config (MCPServerConfig)
+## Config
 
-```ts
+Each server has a **config.json** at its root with `mcp` and `api` sections. `src/config.ts` loads it and applies env overrides. Export `getMCPConfig()` and `getConfig()`.
+
+```json
 {
-  enabled: boolean;
-  transports: { stdio: boolean; http: boolean };
-  httpPort?: number;
-  serverName: string;
-  serverVersion: string;
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3001,
+    "serverName": "my-server-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": { /* API-specific settings */ }
 }
 ```
 
-Environment variables:
-
-- `MCP_TRANSPORT`: `stdio` | `http` | `both`
-- `MCP_HTTP_PORT`, `MCP_SERVER_NAME`, `MCP_SERVER_VERSION`
-- `ENABLE_MCP_SERVER`: `true`/`false`
+Environment variables override config.json. Standard MCP vars: `MCP_TRANSPORT`, `MCP_HTTP_PORT`, `MCP_SERVER_NAME`, `ENABLE_MCP_SERVER`.
 
 ---
 
@@ -130,8 +135,19 @@ if (mcpConfig.enabled) {
 
 ---
 
+## Documentation
+
+- **Per-server README** (`servers/<name>/README.md`): Tools list, config, env vars, Cursor/Claude Desktop setup.
+- **Global README** (`README.md`): Add the new server to the Servers table and Quick Start example after every service add.
+
+---
+
 ## Checklist for New Servers
 
+- [ ] `README.md` at server root (tools, config, Cursor config)
+- [ ] Update global `README.md` — add server to Servers table
+- [ ] `config.json` at server root with mcp + api sections
+- [ ] `src/config.ts` loading config, env overrides, `getMCPConfig()` export
 - [ ] One API / domain per server
 - [ ] Tools in `src/mcp/tools/*Tools.ts` with schema + execute
 - [ ] `MCPServerConfig` from env

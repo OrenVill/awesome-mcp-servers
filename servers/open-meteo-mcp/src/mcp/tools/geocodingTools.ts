@@ -4,6 +4,7 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
 
 export interface SearchLocationsInput {
@@ -17,7 +18,16 @@ export class GeocodingTools {
   private service: OpenMeteoService;
 
   constructor(service?: OpenMeteoService) {
-    this.service = service ?? new OpenMeteoService();
+    if (service) {
+      this.service = service;
+    } else {
+      const api = getConfig().api;
+      this.service = new OpenMeteoService({
+        geocodingBase: api.geocodingBaseUrl,
+        forecastBase: api.forecastBaseUrl,
+        timeout: api.timeoutMs,
+      });
+    }
   }
 
   static getSearchLocationsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
