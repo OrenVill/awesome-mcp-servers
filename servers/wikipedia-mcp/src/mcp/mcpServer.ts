@@ -9,6 +9,9 @@ import {
 
 import {
   WikipediaTools,
+  SEARCH_WIKIPEDIA_DEF,
+  GET_ARTICLE_DEF,
+  GET_SUMMARY_DEF,
   type SearchWikipediaInput,
   type GetArticleInput,
   type GetSummaryInput,
@@ -54,21 +57,15 @@ export class MCPServer {
       log(this.config.serverName, 'request', { method: 'tools/list' });
       const tools: Tool[] = [
         {
-          name: 'search_wikipedia',
-          description:
-            'Search for Wikipedia articles by query. Returns article titles and snippets. Use before get_article or get_summary when you need to find articles by topic.',
+          ...SEARCH_WIKIPEDIA_DEF,
           inputSchema: WikipediaTools.getSearchWikipediaSchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_article',
-          description:
-            'Get full extract/summary of a Wikipedia article by exact title. Returns introductory and extended content.',
+          ...GET_ARTICLE_DEF,
           inputSchema: WikipediaTools.getGetArticleSchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_summary',
-          description:
-            'Get a brief summary of a Wikipedia article by exact title. Uses REST summary when available, otherwise intro extract.',
+          ...GET_SUMMARY_DEF,
           inputSchema: WikipediaTools.getGetSummarySchema().inputSchema as Tool['inputSchema'],
         },
       ];
