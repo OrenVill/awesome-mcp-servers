@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3003,
+    "serverName": "wikipedia-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "restBaseUrl": "https://en.wikipedia.org/api/rest_v1",
+    "mediaWikiBaseUrl": "https://en.wikipedia.org/w/api.php",
+    "timeoutMs": 15000
+  }
+}
