@@ -9,6 +9,10 @@ import {
 
 import {
   HackerNewsTools,
+  GET_TOP_STORIES_DEF,
+  GET_STORY_DEF,
+  GET_COMMENTS_DEF,
+  SEARCH_HN_DEF,
   type GetTopStoriesInput,
   type GetStoryInput,
   type GetCommentsInput,
@@ -55,30 +59,22 @@ export class MCPServer {
       log(this.config.serverName, 'request', { method: 'tools/list' });
       const tools: Tool[] = [
         {
-          name: 'get_top_stories',
-          description:
-            'Fetch top, new, or best stories from Hacker News. Returns title, URL, score, author, and comment count for each story.',
+          ...GET_TOP_STORIES_DEF,
           inputSchema: HackerNewsTools.getTopStoriesSchema()
             .inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_story',
-          description:
-            'Get a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.',
+          ...GET_STORY_DEF,
           inputSchema: HackerNewsTools.getStorySchema()
             .inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_comments',
-          description:
-            'Get the comment tree for a story. Returns the story and nested comments with configurable depth and limit.',
+          ...GET_COMMENTS_DEF,
           inputSchema: HackerNewsTools.getCommentsSchema()
             .inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'search_hn',
-          description:
-            'Search Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.',
+          ...SEARCH_HN_DEF,
           inputSchema: HackerNewsTools.getSearchHNSchema()
             .inputSchema as Tool['inputSchema'],
         },
