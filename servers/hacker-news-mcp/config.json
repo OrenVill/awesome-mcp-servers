@@ -2,7 +2,7 @@
   "mcp": {
     "enabled": true,
     "transport": "http",
-    "httpPort": 3004,
+    "httpPort": 3502,
     "serverName": "hacker-news-mcp",
     "serverVersion": "1.0.0"
   },
