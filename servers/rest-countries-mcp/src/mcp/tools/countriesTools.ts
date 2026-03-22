@@ -7,6 +7,22 @@ import { getConfig } from '../../config.js';
 import { RestCountriesService } from '../../services/restCountriesService.js';
 import type { Country } from '../../services/restCountriesService.js';
 
+export const GET_COUNTRY_DEF = {
+  name: 'get_country',
+  description: 'Look up a country by name or alpha-2/alpha-3 code. Returns country details including capital, region, population, languages.',
+  keywords: ['country', 'countries', 'geography', 'capital', 'region'],
+};
+export const SEARCH_COUNTRIES_DEF = {
+  name: 'search_countries',
+  description: 'Search countries by region, subregion, or capital city. Returns matching countries.',
+  keywords: ['country', 'countries', 'region', 'capital', 'search'],
+};
+export const LIST_ALL_COUNTRIES_DEF = {
+  name: 'list_all_countries',
+  description: 'List all countries with optional field selection. Returns name, codes, capital, region, etc.',
+  keywords: ['country', 'countries', 'list', 'all'],
+};
+
 const DEFAULT_FIELDS = [
   'name',
   'cca2',
