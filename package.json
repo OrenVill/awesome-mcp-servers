@@ -1,0 +1,10 @@
+{
+  "name": "awesome-mcp-servers",
+  "private": true,
+  "workspaces": [
+    "servers/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present"
+  }
+}
