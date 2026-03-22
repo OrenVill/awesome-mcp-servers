@@ -7,6 +7,13 @@ import {
 import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
 
+export const SEARCH_LOCATIONS_DEF = {
+  name: 'search_locations',
+  description:
+    'Search for locations by name or postal code. Returns coordinates and timezone for use with weather tools. Use before get_current_weather or get_forecast when you only have a place name.',
+  keywords: ['weather', 'location', 'city', 'search', 'geocode', 'coordinates'],
+};
+
 export interface SearchLocationsInput {
   name: string;
   count?: number;
