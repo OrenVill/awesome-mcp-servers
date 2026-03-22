@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3004,
+    "serverName": "hacker-news-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "firebaseBaseUrl": "https://hacker-news.firebaseio.com/v0",
+    "algoliaBaseUrl": "https://hn.algolia.com/api/v1",
+    "timeoutMs": 15000
+  }
+}
