@@ -33,14 +33,12 @@ const DEFAULT_DAILY = [
 
 export const GET_CURRENT_WEATHER_DEF = {
   name: 'get_current_weather',
-  description:
-    'Get current weather conditions for a location by latitude and longitude. Returns temperature, humidity, wind, precipitation, and weather conditions.',
+  description: 'Get current weather for a location by latitude and longitude.',
   keywords: ['weather', 'temperature', 'forecast', 'current'],
 };
 export const GET_FORECAST_DEF = {
   name: 'get_forecast',
-  description:
-    'Get multi-day weather forecast for a location. Returns daily highs/lows, precipitation, and conditions for up to 16 days.',
+  description: 'Get weather forecast for the next 1-16 days.',
   keywords: ['weather', 'forecast', 'temperature', 'precipitation'],
 };
 
