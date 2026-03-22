@@ -6,6 +6,22 @@ import {
 import { getConfig } from '../../config.js';
 import { WikipediaService } from '../../services/wikipediaService.js';
 
+export const SEARCH_WIKIPEDIA_DEF = {
+  name: 'search_wikipedia',
+  description: 'Search for Wikipedia articles by query. Returns article titles and snippets. Use before get_article or get_summary when you need to find articles by topic.',
+  keywords: ['wikipedia', 'search', 'article', 'encyclopedia'],
+};
+export const GET_ARTICLE_DEF = {
+  name: 'get_article',
+  description: 'Get full extract/summary of a Wikipedia article by exact title. Returns introductory and extended content.',
+  keywords: ['wikipedia', 'article', 'read', 'content'],
+};
+export const GET_SUMMARY_DEF = {
+  name: 'get_summary',
+  description: 'Get a brief summary of a Wikipedia article by exact title. Uses REST summary when available, otherwise intro extract.',
+  keywords: ['wikipedia', 'summary', 'brief'],
+};
+
 export interface SearchWikipediaInput {
   query: string;
   limit?: number;
