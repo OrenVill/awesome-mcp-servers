@@ -7,9 +7,11 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
-import { GeocodingTools } from './tools/geocodingTools.js';
+import { GeocodingTools, SEARCH_LOCATIONS_DEF } from './tools/geocodingTools.js';
 import {
   WeatherTools,
+  GET_CURRENT_WEATHER_DEF,
+  GET_FORECAST_DEF,
   type GetCurrentWeatherInput,
   type GetForecastInput,
 } from './tools/weatherTools.js';
@@ -56,21 +58,15 @@ export class MCPServer {
       log(this.config.serverName, 'request', { method: 'tools/list' });
       const tools: Tool[] = [
         {
-          name: 'search_locations',
-          description:
-            'Search for locations by name or postal code. Returns coordinates and timezone for use with weather tools. Use before get_current_weather or get_forecast when you only have a place name.',
+          ...SEARCH_LOCATIONS_DEF,
           inputSchema: GeocodingTools.getSearchLocationsSchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_current_weather',
-          description:
-            'Get current weather conditions for a location by latitude and longitude. Returns temperature, humidity, wind, precipitation, and weather conditions.',
+          ...GET_CURRENT_WEATHER_DEF,
           inputSchema: WeatherTools.getCurrentWeatherSchema().inputSchema as Tool['inputSchema'],
         },
         {
-          name: 'get_forecast',
-          description:
-            'Get multi-day weather forecast for a location. Returns daily highs/lows, precipitation, and conditions for up to 16 days.',
+          ...GET_FORECAST_DEF,
           inputSchema: WeatherTools.getForecastSchema().inputSchema as Tool['inputSchema'],
         },
       ];
