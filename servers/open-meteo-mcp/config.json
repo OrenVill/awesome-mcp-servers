@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3500,
+    "serverName": "open-meteo-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "geocodingBaseUrl": "https://geocoding-api.open-meteo.com/v1",
+    "forecastBaseUrl": "https://api.open-meteo.com/v1",
+    "timeoutMs": 15000
+  }
+}
