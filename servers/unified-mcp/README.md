@@ -39,7 +39,7 @@ All bundled tools:
   "mcp": {
     "enabled": true,
     "transport": "both",
-    "httpPort": 3000,
+    "httpPort": 8000,
     "serverName": "unified-mcp",
     "serverVersion": "1.0.0",
     "popularTools": ["get_current_weather", "search_wikipedia", "get_top_stories"],
@@ -62,7 +62,7 @@ All bundled tools:
 | Variable | Overrides | Description |
 |----------|-----------|-------------|
 | `MCP_TRANSPORT` | `mcp.transport` | `stdio`, `http`, or `both` |
-| `MCP_HTTP_PORT` | `mcp.httpPort` | HTTP server port (default: 3000) |
+| `MCP_HTTP_PORT` | `mcp.httpPort` | HTTP server port (default: 8000) |
 | `UNIFIED_MCP_USAGE_FILE` | `mcp.usageFile` | Path for usage tracking JSON |
 
 API base URLs and timeouts are overridable via env (e.g. `OPEN_METEO_GEOCODING_URL`, `REST_COUNTRIES_BASE_URL`).
@@ -91,7 +91,7 @@ Use an absolute path to `dist/app.js`. Ensure sibling servers are built first (`
 # Both transports (default)
 MCP_TRANSPORT=both npm start
 
-# HTTP only (port 3000)
+# HTTP only (port 8000)
 MCP_TRANSPORT=http npm start
 
 # Stdio only (for Cursor, Claude Desktop, etc.)
@@ -100,5 +100,5 @@ MCP_TRANSPORT=stdio npm start
 
 ## HTTP Mode
 
-- **MCP endpoint:** `http://localhost:3000/mcp`
-- **Health check:** `http://localhost:3000/health`
+- **MCP endpoint:** `http://localhost:8000/mcp`
+- **Health check:** `http://localhost:8000/health`

@@ -1,6 +1,8 @@
 # Awesome MCP Servers
 
-Collection of API-specialized MCP (Model Context Protocol) servers. Each server targets one API and supports both HTTP and stdio transports.
+Collection of API-specialized MCP (Model Context Protocol) servers. Each server targets one API and supports both HTTP and stdio transports. No API keys required.
+
+**Prerequisites:** Node.js 18+, npm
 
 ## Servers
 
@@ -14,13 +16,18 @@ Collection of API-specialized MCP (Model Context Protocol) servers. Each server 
 
 ## Quick Start
 
-### Unified server (all tools)
+From the repo root:
 
 ```bash
 npm install
 npm run build
+```
+
+### Unified server (all tools)
+
+```bash
 cd servers/unified-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 3000
+MCP_TRANSPORT=http npm start   # HTTP on port 8000 (see config.json)
 # or
 MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
 ```
@@ -31,36 +38,27 @@ Each server runs independently:
 
 ```bash
 cd servers/open-meteo-mcp
-npm install
-npm run build
-MCP_TRANSPORT=http npm start   # HTTP on port 3001
+MCP_TRANSPORT=http npm start   # HTTP on port 3500
 # or
-MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
-```
-
-```bash
-cd servers/hacker-news-mcp
-npm install
-npm run build
-MCP_TRANSPORT=http npm start   # HTTP on port 3004
-# or
-MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
-```
-
-```bash
-cd servers/wikipedia-mcp
-npm install
-npm run build
-MCP_TRANSPORT=http npm start   # HTTP on port 3003
-# or
-MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
+MCP_TRANSPORT=stdio npm start
 ```
 
 ```bash
 cd servers/rest-countries-mcp
-npm install
-npm run build
-MCP_TRANSPORT=http npm start   # HTTP on port 3002
-# or
-MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
+MCP_TRANSPORT=http npm start   # HTTP on port 3501
 ```
+
+```bash
+cd servers/hacker-news-mcp
+MCP_TRANSPORT=http npm start   # HTTP on port 3502
+```
+
+```bash
+cd servers/wikipedia-mcp
+MCP_TRANSPORT=http npm start   # HTTP on port 3503
+```
+
+## Known limitations
+
+- **Build order:** Run `npm run build` from repo root so sibling servers are built before unified-mcp.
+- **Rate limits:** External APIs (Open-Meteo, Wikipedia, etc.) may enforce rate limits; no keys = shared quotas.
