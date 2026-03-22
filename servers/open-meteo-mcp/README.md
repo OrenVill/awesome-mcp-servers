@@ -23,14 +23,39 @@ MCP_TRANSPORT=http npm start
 MCP_TRANSPORT=stdio npm start
 ```
 
+## Configuration
+
+Each server has a `config.json` at its root. Values are overridden by environment variables.
+
+**config.json:**
+```json
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3001,
+    "serverName": "open-meteo-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "geocodingBaseUrl": "https://geocoding-api.open-meteo.com/v1",
+    "forecastBaseUrl": "https://api.open-meteo.com/v1",
+    "timeoutMs": 15000
+  }
+}
+```
+
 ## Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MCP_TRANSPORT` | `both` | `stdio`, `http`, or `both` |
-| `MCP_HTTP_PORT` | `3001` | HTTP server port |
-| `MCP_SERVER_NAME` | `open-meteo-mcp` | Server name |
-| `ENABLE_MCP_SERVER` | `true` | Enable/disable server |
+| Variable | Overrides | Description |
+|----------|-----------|-------------|
+| `MCP_TRANSPORT` | `mcp.transport` | `stdio`, `http`, or `both` |
+| `MCP_HTTP_PORT` | `mcp.httpPort` | HTTP server port |
+| `MCP_SERVER_NAME` | `mcp.serverName` | Server name |
+| `ENABLE_MCP_SERVER` | `mcp.enabled` | `false` to disable |
+| `OPEN_METEO_GEOCODING_URL` | `api.geocodingBaseUrl` | Geocoding API base |
+| `OPEN_METEO_FORECAST_URL` | `api.forecastBaseUrl` | Forecast API base |
+| `OPEN_METEO_TIMEOUT_MS` | `api.timeoutMs` | Request timeout (ms) |
 
 ## Cursor Configuration
 

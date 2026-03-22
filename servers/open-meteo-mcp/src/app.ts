@@ -1,9 +1,10 @@
 import 'dotenv/config';
 
-import { createMCPServer, getDefaultMCPConfig } from './mcp/mcpServer.js';
+import { getMCPConfig } from './config.js';
+import { createMCPServer } from './mcp/mcpServer.js';
 
 async function main(): Promise<void> {
-  const config = getDefaultMCPConfig();
+  const config = getMCPConfig();
   if (!config.enabled) {
     console.error('MCP server disabled (ENABLE_MCP_SERVER=false)');
     process.exit(0);

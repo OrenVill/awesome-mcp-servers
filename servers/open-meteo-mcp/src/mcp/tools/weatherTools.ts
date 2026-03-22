@@ -4,6 +4,7 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
 
 const DEFAULT_CURRENT = [
@@ -51,7 +52,16 @@ export class WeatherTools {
   private service: OpenMeteoService;
 
   constructor(service?: OpenMeteoService) {
-    this.service = service ?? new OpenMeteoService();
+    if (service) {
+      this.service = service;
+    } else {
+      const api = getConfig().api;
+      this.service = new OpenMeteoService({
+        geocodingBase: api.geocodingBaseUrl,
+        forecastBase: api.forecastBaseUrl,
+        timeout: api.timeoutMs,
+      });
+    }
   }
 
   static getCurrentWeatherSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
