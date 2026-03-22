@@ -16,7 +16,7 @@ Supports both **stdio** and **HTTP** via `MCP_TRANSPORT`:
 # Both transports (default)
 MCP_TRANSPORT=both npm start
 
-# HTTP only (port 3003)
+# HTTP only (port 3503)
 MCP_TRANSPORT=http npm start
 
 # Stdio only (for Cursor, Claude Desktop, etc.)
@@ -33,7 +33,7 @@ Each server has a `config.json` at its root. Values are overridden by environmen
   "mcp": {
     "enabled": true,
     "transport": "http",
-    "httpPort": 3003,
+    "httpPort": 3503,
     "serverName": "wikipedia-mcp",
     "serverVersion": "1.0.0"
   },
