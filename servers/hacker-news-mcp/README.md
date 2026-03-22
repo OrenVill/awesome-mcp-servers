@@ -17,7 +17,7 @@ Supports both **stdio** and **HTTP** via `MCP_TRANSPORT`:
 # Both transports (default)
 MCP_TRANSPORT=both npm start
 
-# HTTP only (port 3004)
+# HTTP only (port 3502)
 MCP_TRANSPORT=http npm start
 
 # Stdio only (for Cursor, Claude Desktop, etc.)
@@ -32,7 +32,7 @@ MCP_TRANSPORT=stdio npm start
   "mcp": {
     "enabled": true,
     "transport": "http",
-    "httpPort": 3004,
+    "httpPort": 3502,
     "serverName": "hacker-news-mcp",
     "serverVersion": "1.0.0"
   },

@@ -2,7 +2,7 @@
   "mcp": {
     "enabled": true,
     "transport": "both",
-    "httpPort": 3000,
+    "httpPort": 8000,
     "serverName": "unified-mcp",
     "serverVersion": "1.0.0",
     "popularTools": ["get_current_weather", "search_wikipedia", "get_top_stories"],
