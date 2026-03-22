@@ -18,6 +18,12 @@ import express from 'express';
 import cors from 'cors';
 import { randomUUID } from 'crypto';
 
+function log(server: string, event: string, data?: Record<string, unknown>): void {
+  const prefix = `[${server}]`;
+  const msg = data ? `${prefix} ${event} ${JSON.stringify(data)}` : `${prefix} ${event}`;
+  console.error(msg);
+}
+
 export class MCPServer {
   private geocodingTools: GeocodingTools;
   private weatherTools: WeatherTools;
@@ -47,6 +53,7 @@ export class MCPServer {
     );
 
     server.setRequestHandler(ListToolsRequestSchema, async () => {
+      log(this.config.serverName, 'request', { method: 'tools/list' });
       const tools: Tool[] = [
         {
           name: 'search_locations',
@@ -74,6 +81,8 @@ export class MCPServer {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       const safeArgs = (args ?? {}) as Record<string, unknown>;
+      const argsPreview = JSON.stringify(safeArgs).slice(0, 200);
+      log(this.config.serverName, 'tool', { name, args: argsPreview });
 
       try {
         let result;
@@ -96,9 +105,11 @@ export class MCPServer {
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
+        log(this.config.serverName, 'tool', { name, status: 'ok' });
         return result as { content: Array<{ type: string; text: string }> };
       } catch (error) {
-        console.error(`Error executing tool ${name}:`, error);
+        const msg = error instanceof Error ? error.message : String(error);
+        log(this.config.serverName, 'tool', { name, status: 'error', message: msg });
         throw error;
       }
     });
@@ -115,11 +126,11 @@ export class MCPServer {
       return;
     }
 
-    console.error('MCP Server: Starting stdio transport...');
+    log(this.config.serverName, 'transport starting', { transport: 'stdio' });
     this.server = this.createServerWithHandlers();
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error('MCP Server: stdio transport ready');
+    log(this.config.serverName, 'transport ready', { transport: 'stdio' });
   }
 
   async startHttp(): Promise<void> {
@@ -128,7 +139,7 @@ export class MCPServer {
     }
 
     const port = this.config.httpPort ?? 3001;
-    console.error(`MCP Server: Starting HTTP transport on port ${port}...`);
+    log(this.config.serverName, 'transport starting', { transport: 'http', port });
 
     this.httpApp = express();
 
@@ -145,6 +156,7 @@ export class MCPServer {
     this.httpApp.use(express.json({ limit: '10mb' }));
 
     this.httpApp.get('/health', (_req, res) => {
+      log(this.config.serverName, 'request', { method: 'GET', path: '/health' });
       res.json({
         status: 'healthy',
         server: this.config.serverName,
@@ -166,20 +178,26 @@ export class MCPServer {
         const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
         if (req.method === 'POST' && (req.body as { method?: string })?.method === 'initialize') {
+          log(this.config.serverName, 'request', { method: req.method, path: '/mcp', body: 'initialize' });
           const sessionServer = this.createServerWithHandlers();
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => randomUUID(),
             onsessioninitialized: (sid) => {
               this.transports.set(sid, transport);
+              log(this.config.serverName, 'session initialized', { sessionId: sid });
             },
             onsessionclosed: (sid) => {
               this.transports.delete(sid);
+              log(this.config.serverName, 'session closed', { sessionId: sid });
             },
           });
           await sessionServer.connect(transport);
         } else if (sessionId && this.transports.has(sessionId)) {
+          const bodyMethod = (req.body as { method?: string })?.method ?? 'unknown';
+          log(this.config.serverName, 'request', { method: req.method, path: '/mcp', sessionId, bodyMethod });
           transport = this.transports.get(sessionId)!;
         } else {
+          log(this.config.serverName, 'request rejected', { reason: sessionId ? 'session not found' : 'missing session id', sessionId });
           if (!res.headersSent) {
             res.status(400).json({
               jsonrpc: '2.0',
@@ -197,7 +215,8 @@ export class MCPServer {
 
         await transport.handleRequest(req, res, req.body);
       } catch (error) {
-        console.error('MCP Server: HTTP request error', error);
+        const msg = error instanceof Error ? error.message : String(error);
+        log(this.config.serverName, 'request error', { error: msg });
         if (!res.headersSent) {
           res.status(500).json({
             jsonrpc: '2.0',
@@ -213,8 +232,7 @@ export class MCPServer {
     });
 
     this.httpServer = this.httpApp.listen(port, () => {
-      console.error(`MCP Server: HTTP at http://localhost:${port}/mcp`);
-      console.error(`MCP Server: Health at http://localhost:${port}/health`);
+      log(this.config.serverName, 'transport ready', { transport: 'http', port, mcp: `http://localhost:${port}/mcp`, health: `http://localhost:${port}/health` });
     });
   }
 
@@ -231,12 +249,14 @@ export class MCPServer {
     }
 
     await Promise.all(startPromises);
-    console.error('MCP Server: Open-Meteo MCP ready');
+    log(this.config.serverName, 'ready');
   }
 
   async stop(): Promise<void> {
-    for (const [, transport] of this.transports) {
+    log(this.config.serverName, 'shutting down', { activeSessions: this.transports.size });
+    for (const [sid, transport] of this.transports) {
       await transport.close();
+      log(this.config.serverName, 'session closed', { sessionId: sid });
     }
     this.transports.clear();
 
