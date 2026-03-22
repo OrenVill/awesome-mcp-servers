@@ -7,6 +7,7 @@ Collection of API-specialized MCP (Model Context Protocol) servers. Each server 
 | Server | Description |
 |--------|-------------|
 | [open-meteo-mcp](servers/open-meteo-mcp/) | Weather API — location search, current weather, forecasts (no API key) |
+| [wikipedia-mcp](servers/wikipedia-mcp/) | Wikipedia/MediaWiki API — search articles, get summaries and extracts (no API key) |
 
 ## Quick Start
 
@@ -16,7 +17,7 @@ Each server runs independently:
 cd servers/open-meteo-mcp
 npm install
 npm run build
-MCP_TRANSPORT=http npm start   # HTTP on port 3001
+MCP_TRANSPORT=http npm start   # HTTP (open-meteo: 3500, wikipedia: 3003)
 # or
 MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
 ```
