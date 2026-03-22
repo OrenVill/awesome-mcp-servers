@@ -1,0 +1,143 @@
+---
+description: Standards for creating API-specialized MCP servers with HTTP and stdio transports
+globs: src/mcp/**/*.ts, src/**/mcp*.ts, **/mcp-server*.ts
+alwaysApply: false
+---
+
+# MCP Server Creation Rule
+
+Use this rule when creating or modifying MCP servers. Each server should be **one API, one purpose**, follow the MCP protocol, and support both **HTTP** and **stdio** transports.
+
+---
+
+## Project Structure
+
+```
+src/
+├── mcp/
+│   ├── mcpServer.ts          # Main server: dual transport, handlers
+│   ├── types/
+│   │   └── mcpTypes.ts       # MCPServerConfig, schemas, result types
+│   └── tools/
+│       └── *Tools.ts         # One file per tool group (e.g., searchTools.ts)
+├── services/                 # API client logic (outside MCP)
+└── app.ts                    # Entry: dotenv, express, MCP server bootstrap
+```
+
+---
+
+## Dependencies
+
+- `@modelcontextprotocol/sdk` — Server, transports, schemas
+- `express` + `cors` — HTTP transport
+- `dotenv` — Config (skip in test mode)
+
+---
+
+## Server Class Pattern
+
+1. **Constructor**: Initialize `Server` from SDK with `name`, `version`, `capabilities: { tools: {} }`.
+2. **Handlers**:
+   - `ListToolsRequestSchema` → return `{ tools: Tool[] }` with `name`, `description`, `inputSchema`.
+   - `CallToolRequestSchema` → switch on `name`, delegate to tool classes, return `{ content: MCPContentItem[] }`.
+3. **Transports**:
+   - Stdio: `StdioServerTransport`, `await this.server.connect(transport)`.
+   - HTTP: Express app, `StreamableHTTPServerTransport`, `/mcp` endpoint, session map for `Mcp-Session-Id`.
+
+---
+
+## Tool Class Pattern
+
+```ts
+// tools/exampleTools.ts
+export class ExampleTools {
+  static getToolSchema(): { inputSchema: object } { /* ... */ }
+  async initialize(): Promise<void> { /* ... */ }
+  async cleanup(): Promise<void> { /* ... */ }
+  async executeTool(args: object): Promise<{ content: MCPContentItem[] }> {
+    // Return { content: [{ type: 'text', text: string }] }
+  }
+}
+```
+
+- Schema uses JSON Schema: `type: 'object'`, `properties`, `required`.
+- Use `createMCPErrorResult(MCPErrorCode, message)` for errors.
+- Use `format*AsText()` helpers for LLM-friendly output.
+
+---
+
+## Config (MCPServerConfig)
+
+```ts
+{
+  enabled: boolean;
+  transports: { stdio: boolean; http: boolean };
+  httpPort?: number;
+  serverName: string;
+  serverVersion: string;
+}
+```
+
+Environment variables:
+
+- `MCP_TRANSPORT`: `stdio` | `http` | `both`
+- `MCP_HTTP_PORT`, `MCP_SERVER_NAME`, `MCP_SERVER_VERSION`
+- `ENABLE_MCP_SERVER`: `true`/`false`
+
+---
+
+## HTTP Transport Details
+
+- **CORS**: Allow `Content-Type`, `Authorization`, `X-Session-Id`, `Accept`, `Mcp-Session-Id`.
+- **Body**: `express.json({ limit: '10mb' })`.
+- **Endpoints**: `GET /health`, `ALL /mcp`.
+- **Session**: Create new `StreamableHTTPServerTransport` on `initialize`; store by session ID; reuse for later requests.
+- **Client workaround**: If `Accept` lacks `text/event-stream` or `application/json`, set `Accept: application/json, text/event-stream`.
+
+---
+
+## MCP Response Format
+
+Tool results must return:
+
+```ts
+{ content: [{ type: 'text', text: string }] }
+```
+
+Errors: `createMCPErrorResult(MCPErrorCode.XXX, message)` → same shape.
+
+---
+
+## Startup & Shutdown
+
+1. `initialize()` — init tool services (e.g., API clients, cache).
+2. `startStdio()` and/or `startHttp()` — connect transports.
+3. `stop()` — close transports, cleanup tools, close HTTP server.
+
+---
+
+## Entry Point (app.ts)
+
+```ts
+if (process.env.NODE_ENV !== 'test') require('dotenv').config();
+// ... express setup ...
+const mcpConfig = getDefaultMCPConfig();
+if (mcpConfig.enabled) {
+  this.mcpServer = await createMCPServer(mcpConfig, this.cacheService);
+}
+// Graceful shutdown: await this.mcpServer?.stop();
+```
+
+---
+
+## Checklist for New Servers
+
+- [ ] One API / domain per server
+- [ ] Tools in `src/mcp/tools/*Tools.ts` with schema + execute
+- [ ] `MCPServerConfig` from env
+- [ ] Stdio and HTTP transports selectable via `MCP_TRANSPORT`
+- [ ] `/health` and `/mcp` on HTTP
+- [ ] Session handling for HTTP (`Mcp-Session-Id`)
+- [ ] Tool responses as `{ content: [{ type: 'text', text }] }`
+- [ ] Exhaustive switch on tool name, throw for unknown
+- [ ] `initialize` / `cleanup` for tools with external deps
