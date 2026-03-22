@@ -31,6 +31,19 @@ const DEFAULT_DAILY = [
   'sunset',
 ];
 
+export const GET_CURRENT_WEATHER_DEF = {
+  name: 'get_current_weather',
+  description:
+    'Get current weather conditions for a location by latitude and longitude. Returns temperature, humidity, wind, precipitation, and weather conditions.',
+  keywords: ['weather', 'temperature', 'forecast', 'current'],
+};
+export const GET_FORECAST_DEF = {
+  name: 'get_forecast',
+  description:
+    'Get multi-day weather forecast for a location. Returns daily highs/lows, precipitation, and conditions for up to 16 days.',
+  keywords: ['weather', 'forecast', 'temperature', 'precipitation'],
+};
+
 export interface GetCurrentWeatherInput {
   latitude: number;
   longitude: number;
