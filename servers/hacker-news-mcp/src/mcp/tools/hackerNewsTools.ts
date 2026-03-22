@@ -10,6 +10,31 @@ import {
   type StoryListType,
 } from '../../services/hackerNewsService.js';
 
+export const GET_TOP_STORIES_DEF = {
+  name: 'get_top_stories',
+  description:
+    'Fetch top, new, or best stories from Hacker News. Returns title, URL, score, author, and comment count for each story.',
+  keywords: ['hacker news', 'hn', 'news', 'stories', 'top'],
+};
+export const GET_STORY_DEF = {
+  name: 'get_story',
+  description:
+    'Get a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.',
+  keywords: ['hacker news', 'hn', 'story', 'item'],
+};
+export const GET_COMMENTS_DEF = {
+  name: 'get_comments',
+  description:
+    'Get the comment tree for a story. Returns the story and nested comments with configurable depth and limit.',
+  keywords: ['hacker news', 'hn', 'comments', 'discussion'],
+};
+export const SEARCH_HN_DEF = {
+  name: 'search_hn',
+  description:
+    'Search Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.',
+  keywords: ['hacker news', 'hn', 'search'],
+};
+
 export interface GetTopStoriesInput {
   count?: number;
   listType?: 'top' | 'new' | 'best';
