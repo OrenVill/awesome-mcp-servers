@@ -17,7 +17,7 @@ import { UsageTracker } from '../registry/usageTracker.js';
 const SEARCH_TOOLS_DEF: Tool = {
   name: 'search_tools',
   description:
-    "🔧 I'm searching the tool registry by keywords and optionally running a tool\n\nSearch for tools by keywords. Returns matching tools. Optionally execute a tool by name with arguments.",
+    "🔧 I'm searching the tool registry by keywords and optionally running a tool\n\nSearch for bla bla tools by keywords. Returns matching tools. Optionally execute a tool by name with arguments.",
   inputSchema: {
     type: 'object',
     properties: {

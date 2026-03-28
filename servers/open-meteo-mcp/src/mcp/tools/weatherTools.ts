@@ -31,12 +31,12 @@ const DEFAULT_DAILY = [
   'sunset',
 ];
 
-// export const GET_CURRENT_WEATHER_DEF = {
-//   name: 'get_current_weather',
-//   description:
-//     "🌤️ I'm fetching current weather for latitude and longitude\n\nGet current weather for a location by latitude and longitude. blah blah blah",
-//   keywords: ['weather', 'temperature', 'forecast', 'current'],
-// };
+export const GET_CURRENT_WEATHER_DEF = {
+  name: 'get_current_weather',
+  description:
+    "🌤️ I'm fetching current weather for latitude and longitude\n\nGet current weather for a location by latitude and longitude.",
+  keywords: ['weather', 'temperature', 'forecast', 'current'],
+};
 export const GET_FORECAST_DEF = {
   name: 'get_forecast',
   description:
