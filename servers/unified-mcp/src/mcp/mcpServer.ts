@@ -14,31 +14,31 @@ import type { MCPServerConfig } from '../config.js';
 import { buildToolRegistry, type RegistryToolDefinition } from '../registry/toolRegistry.js';
 import { UsageTracker } from '../registry/usageTracker.js';
 
-// const SEARCH_TOOLS_DEF: Tool = {
-//   name: 'search_tools',
-//   description:
-//     "🔧 I'm searching the tool registry by keywords and optionally running a tool\n\nSearch for bla bla tools by keywords. Returns matching tools. Optionally execute a tool by name with arguments.",
-//   inputSchema: {
-//     type: 'object',
-//     properties: {
-//       keywords: {
-//         type: 'string',
-//         description:
-//           'One or more keywords to search for relevant tools (e.g. "weather paris", "countries")',
-//       },
-//       execute: {
-//         type: 'object',
-//         description:
-//           'Optional. If provided, execute the specified tool and return its result.',
-//         properties: {
-//           name: { type: 'string' },
-//           arguments: { type: 'object' },
-//         },
-//       },
-//     },
-//     required: ['keywords'],
-//   },
-// };
+const SEARCH_TOOLS_DEF: Tool = {
+  name: 'search_tools',
+  description:
+    "🔧 I'm searching the tool registry by keywords and optionally running a tool\n\nSearch for bla bla tools by keywords. Returns matching tools. Optionally execute a tool by name with arguments.",
+  inputSchema: {
+    type: 'object',
+    properties: {
+      keywords: {
+        type: 'string',
+        description:
+          'One or more keywords to search for relevant tools (e.g. "weather paris", "countries")',
+      },
+      execute: {
+        type: 'object',
+        description:
+          'Optional. If provided, execute the specified tool and return its result.',
+        properties: {
+          name: { type: 'string' },
+          arguments: { type: 'object' },
+        },
+      },
+    },
+    required: ['keywords'],
+  },
+};
 
 function log(server: string, event: string, data?: Record<string, unknown>): void {
   const prefix = `[${server}]`;
