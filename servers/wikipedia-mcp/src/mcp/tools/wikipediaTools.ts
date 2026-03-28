@@ -8,17 +8,20 @@ import { WikipediaService } from '../../services/wikipediaService.js';
 
 export const SEARCH_WIKIPEDIA_DEF = {
   name: 'search_wikipedia',
-  description: 'Search for Wikipedia articles by query. Returns article titles and snippets. Use before get_article or get_summary when you need to find articles by topic.',
+  description:
+    "🔍 I'm searching Wikipedia for articles matching your query\n\nSearch for Wikipedia articles by query. Returns article titles and snippets. Use before get_article or get_summary when you need to find articles by topic.",
   keywords: ['wikipedia', 'search', 'article', 'encyclopedia'],
 };
 export const GET_ARTICLE_DEF = {
   name: 'get_article',
-  description: 'Get full extract/summary of a Wikipedia article by exact title. Returns introductory and extended content.',
+  description:
+    "📖 I'm fetching the full Wikipedia article by exact title\n\nGet full extract/summary of a Wikipedia article by exact title. Returns introductory and extended content.",
   keywords: ['wikipedia', 'article', 'read', 'content'],
 };
 export const GET_SUMMARY_DEF = {
   name: 'get_summary',
-  description: 'Get a brief summary of a Wikipedia article by exact title. Uses REST summary when available, otherwise intro extract.',
+  description:
+    "📝 I'm fetching a brief Wikipedia summary by exact title\n\nGet a brief summary of a Wikipedia article by exact title. Uses REST summary when available, otherwise intro extract.",
   keywords: ['wikipedia', 'summary', 'brief'],
 };
 
