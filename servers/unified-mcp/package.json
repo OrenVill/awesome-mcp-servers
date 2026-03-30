@@ -5,6 +5,7 @@
   "main": "dist/app.js",
   "type": "module",
   "scripts": {
+    "prestart": "npm run build --prefix ../..",
     "build": "tsc",
     "start": "node dist/app.js",
     "start:stdio": "MCP_TRANSPORT=stdio node dist/app.js",
