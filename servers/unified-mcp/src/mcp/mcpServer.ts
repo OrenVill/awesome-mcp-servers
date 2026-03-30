@@ -17,14 +17,14 @@ import { UsageTracker } from '../registry/usageTracker.js';
 const SEARCH_TOOLS_DEF: Tool = {
   name: 'search_tools',
   description:
-    "🔧 I'm searching the tool registry by keywords and optionally running a tool\n\nSearch for tools by keywords. Returns matching tools. Optionally execute a tool by name with arguments.",
+    "🔧 I'm searching tools to run\n\nThis server bundles tools for: weather and geocoding (Open-Meteo), country lookup (REST Countries), Wikipedia (search, article, summary), and Hacker News (stories, comments, search). Search by keywords; returns up to 10 matching tools. Optional execute: { name, arguments } runs a tool and returns its result.",
   inputSchema: {
     type: 'object',
     properties: {
       keywords: {
         type: 'string',
         description:
-          'One or more keywords to search for relevant tools (e.g. "weather paris", "countries")',
+          'Keywords to match tool names and descriptions (e.g. "weather forecast", "country capital", "wikipedia article", "hacker news comments").',
       },
       execute: {
         type: 'object',
