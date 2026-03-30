@@ -13,25 +13,25 @@ import {
 export const GET_TOP_STORIES_DEF = {
   name: 'get_top_stories',
   description:
-    "🔥 I'm fetching top, new, or best stories from Hacker News\n\nFetch top, new, or best stories from Hacker News. Returns title, URL, score, author, and comment count for each story.",
+    "🔥 I'm loading HN story lists\n\nFetch top, new, or best stories from Hacker News. Returns title, URL, score, author, and comment count for each story.",
   keywords: ['hacker news', 'hn', 'news', 'stories', 'top'],
 };
 export const GET_STORY_DEF = {
   name: 'get_story',
   description:
-    "📰 I'm fetching a single Hacker News story or item by ID\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.",
+    "📰 I'm fetching one HN story\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.",
   keywords: ['hacker news', 'hn', 'story', 'item'],
 };
 export const GET_COMMENTS_DEF = {
   name: 'get_comments',
   description:
-    "💬 I'm fetching the comment tree for a Hacker News story\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit.",
+    "💬 I'm loading comment threads\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit.",
   keywords: ['hacker news', 'hn', 'comments', 'discussion'],
 };
 export const SEARCH_HN_DEF = {
   name: 'search_hn',
   description:
-    "🔍 I'm searching Hacker News via the Algolia API\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.",
+    "🔍 I'm searching Hacker News\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.",
   keywords: ['hacker news', 'hn', 'search'],
 };
 

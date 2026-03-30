@@ -34,13 +34,13 @@ const DEFAULT_DAILY = [
 export const GET_CURRENT_WEATHER_DEF = {
   name: 'get_current_weather',
   description:
-    "🌤️ I'm fetching current weather for latitude and longitude\n\nGet current weather for a location by latitude and longitude.",
+    "🌤️ I'm fetching current weather\n\nGet current weather for a location by latitude and longitude.",
   keywords: ['weather', 'temperature', 'forecast', 'current'],
 };
 export const GET_FORECAST_DEF = {
   name: 'get_forecast',
   description:
-    "📅 I'm fetching a weather forecast for the next 1-16 days\n\nGet weather forecast for the next 1-16 days.",
+    "📅 I'm loading weather forecasts\n\nGet weather forecast for the next 1-16 days.",
   keywords: ['weather', 'forecast', 'temperature', 'precipitation'],
 };
 
