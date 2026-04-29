@@ -1,6 +1,6 @@
 ---
 description: Standards for creating API-specialized MCP servers with HTTP and stdio transports
-globs: src/mcp/**/*.ts, src/**/mcp*.ts, **/mcp-server*.ts
+globs: servers/*/src/mcp/**/*.ts, servers/*/src/**/mcp*.ts, servers/*/src/mcp/mcpServer.ts
 alwaysApply: false
 ---
 
