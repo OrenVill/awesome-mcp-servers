@@ -17,7 +17,7 @@ import { UsageTracker } from '../registry/usageTracker.js';
 const SEARCH_TOOLS_DEF: Tool = {
   name: 'search_tools',
   description:
-    "🔧 I'm searching tools to run\n\nThis server bundles tools for: weather and geocoding (Open-Meteo), country lookup (REST Countries), Wikipedia (search, article, summary), and Hacker News (stories, comments, search). Search by keywords; returns up to 10 matching tools. Optional execute: { name, arguments } runs a tool and returns its result.",
+    "🔧 I'm searching tools to run\n\nThis server bundles tools across many free, no-key APIs: weather (Open-Meteo), countries (REST Countries), Wikipedia, Hacker News, arXiv, Open Library, OpenStreetMap geocoding (Nominatim), dictionary, FX rates (Frankfurter), USGS earthquakes, SpaceX, public GitHub, MDN docs, Datamuse word-finding, trivia, and Crossref scholarly metadata. Search by keywords; returns up to 10 matching tools. Optional execute: { name, arguments } runs a tool and returns its result.",
   inputSchema: {
     type: 'object',
     properties: {

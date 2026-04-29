@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3509,
+    "serverName": "usgs-earthquake-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://earthquake.usgs.gov/fdsnws/event/1",
+    "timeoutMs": 15000
+  }
+}

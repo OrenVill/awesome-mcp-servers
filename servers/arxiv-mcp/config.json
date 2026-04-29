@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3504,
+    "serverName": "arxiv-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "http://export.arxiv.org/api/query",
+    "timeoutMs": 15000
+  }
+}

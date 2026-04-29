@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3512,
+    "serverName": "mdn-compat-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "searchBaseUrl": "https://developer.mozilla.org/api/v1/search",
+    "docsBaseUrl": "https://developer.mozilla.org",
+    "timeoutMs": 15000
+  }
+}
