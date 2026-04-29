@@ -1,0 +1,57 @@
+# Awesome MCP Servers — Cursor Rules
+
+Monorepo of API-specialized MCP servers. One API per server, no API keys, dual transport (stdio + HTTP). TypeScript, npm workspaces, Node 18+.
+
+The full creation/modification standard lives in `.cursor/rules/mcp-server-creation.mdc` (auto-attached for `servers/*/src/mcp/**`). The notes below apply repo-wide.
+
+## Repo shape
+
+- Workspaces under `servers/*` (see root `package.json`).
+- Servers: `unified-mcp` (aggregator, port 8000), `open-meteo-mcp` (3500), `rest-countries-mcp` (3501), `hacker-news-mcp` (3502), `wikipedia-mcp` (3503).
+- Per-server layout: `config.json`, `src/app.ts`, `src/config.ts`, `src/services/`, `src/mcp/{mcpServer.ts, types/, tools/}`.
+- `unified-mcp` also has `src/registry/` for the tool registry + persistent usage tracker.
+
+## Build & start (turbo)
+
+Build orchestration is `turbo` (config in `turbo.json`). Run from the repo root:
+
+- `npm install && npm run build` — builds all servers in dependency order, cached.
+- `npm start` — starts `unified-mcp` (default transport: both).
+- `npm run start:http` / `npm run start:stdio` — `unified-mcp` on a single transport.
+- `npm run start:all` — every server in parallel.
+- Single sibling: `npx turbo run start:http --filter=<name>`.
+
+Build order is derived from npm-workspace `dependencies`. `unified-mcp` declares the four siblings as `"*"` deps so `dependsOn: ["^build"]` builds them first. When adding a new server that should be aggregated, add it as a `"*"` dep in `servers/unified-mcp/package.json` — do **not** hand-edit a build chain in the root `package.json`.
+
+`.turbo/` and `dist/` are git-ignored. No test runner or linter is configured — don't add either unless asked.
+
+## Conventions (must-follow)
+
+- **One API per server.** The only aggregator is `unified-mcp`.
+- **Config:** root `config.json` with `mcp` + `api` sections. `src/config.ts` loads it and applies env overrides. Export `getMCPConfig()` and `getConfig()`.
+- **Standard env vars:** `MCP_TRANSPORT` (`stdio` | `http` | `both`), `MCP_HTTP_PORT`, `MCP_SERVER_NAME`, `ENABLE_MCP_SERVER`. API-specific vars are namespaced per server (e.g. `OPEN_METEO_FORECAST_URL`, `REST_COUNTRIES_BASE_URL`).
+- **Tool responses:** `{ content: [{ type: 'text', text: string }] }`. Errors via `createMCPErrorResult(MCPErrorCode.XXX, message)` — same shape.
+- **Tool definitions** include `name`, `description`, `inputSchema` (JSON Schema), and a `keywords` array used by `unified-mcp`'s `search_tools` ranking.
+- **Dispatch:** exhaustive `switch` on tool name in `mcpServer.ts`; throw on unknown.
+- **Transports:** stdio via `StdioServerTransport`; HTTP via `StreamableHTTPServerTransport` mounted at `/mcp` with a session map keyed by `Mcp-Session-Id`. Always expose `GET /health`. CORS allows `Content-Type, Authorization, X-Session-Id, Accept, Mcp-Session-Id`. JSON body limit `10mb`.
+- **Logging:** stderr only — stdout is reserved for stdio transport. Every line prefixed with `[<serverName>]`. Log transport ready, session init/close, request received, tool call + ok/error.
+- **Lifecycle:** `initialize()` → `startStdio()` / `startHttp()` → `stop()` (closes transports, runs tool `cleanup()`, shuts down HTTP server).
+
+## TypeScript
+
+- ES2022, `module: NodeNext`, `strict: true`, `esModuleInterop: true`, `resolveJsonModule: true`. Output to `dist/`, source in `src/`.
+- `package.json` is `"type": "module"`.
+
+## When adding a new server
+
+1. Scaffold `servers/<name>/` per the per-server layout. The `servers/*` workspace glob picks it up automatically.
+2. If aggregated by `unified-mcp`: add it as a `"*"` dep in `servers/unified-mcp/package.json` (gives turbo the build edge), register its tools in `servers/unified-mcp/src/registry/toolRegistry.ts`, and add its API block to `servers/unified-mcp/config.json`.
+3. Update root `README.md` (Servers table + Quick Start) and `CHANGELOG.md`.
+4. Pick a free port (35xx for single-API servers, 8xxx for aggregators).
+
+## Don'ts
+
+- Don't add API-key auth — "no key required" is the project's premise.
+- Don't write to stdout from any server (breaks stdio transport). Use `console.error`.
+- Don't merge multiple unrelated APIs into a single non-unified server.
+- Don't replace turbo with a hand-maintained `-w` chain — build order comes from workspace deps + `dependsOn: ["^build"]`.
