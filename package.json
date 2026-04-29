@@ -5,6 +5,17 @@
     "servers/*"
   ],
   "scripts": {
-    "build": "npm run build -w open-meteo-mcp && npm run build -w rest-countries-mcp && npm run build -w wikipedia-mcp && npm run build -w hacker-news-mcp && npm run build -w unified-mcp"
+    "build": "turbo run build",
+    "start": "turbo run start --filter=unified-mcp",
+    "start:http": "turbo run start:http --filter=unified-mcp",
+    "start:stdio": "turbo run start:stdio --filter=unified-mcp",
+    "start:all": "turbo run start"
+  },
+  "devDependencies": {
+    "turbo": "^2.9.6"
+  },
+  "packageManager": "npm@11.12.1",
+  "engines": {
+    "node": ">=18"
   }
 }

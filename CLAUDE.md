@@ -22,23 +22,26 @@ Monorepo of API-specialized MCP (Model Context Protocol) servers. Each server wr
 
 ## Build & run
 
-Always build from the repo root — `unified-mcp` depends on the sibling servers being built first:
+Build orchestration is [turbo](https://turborepo.com). Configuration lives in [turbo.json](turbo.json); turbo derives the build order from npm-workspace `dependencies` (so `unified-mcp` lists its four siblings as `"*"` deps — that's how `dependsOn: ["^build"]` finds them).
 
 ```bash
 npm install
-npm run build              # builds all workspaces in dependency order
+npm run build              # turbo run build  — siblings in parallel, then unified-mcp
+npm start                  # turbo run start --filter=unified-mcp
+npm run start:http         # unified-mcp HTTP only (port 8000)
+npm run start:stdio        # unified-mcp stdio only
+npm run start:all          # every server in parallel
 ```
 
-The root [package.json](package.json) `build` script encodes this order. `unified-mcp/package.json` also has a `prestart` that runs the root build, so `npm start` from `servers/unified-mcp/` is safe.
-
-Run a server:
+Single sibling server:
 
 ```bash
-cd servers/<name>
-MCP_TRANSPORT=http npm start    # HTTP on the port from config.json
-MCP_TRANSPORT=stdio npm start   # stdio for Cursor / Claude Desktop
-MCP_TRANSPORT=both npm start    # default
+npx turbo run start:http --filter=open-meteo-mcp
+# or
+cd servers/<name> && MCP_TRANSPORT=http npm start
 ```
+
+Build outputs (`dist/**`) and `.turbo/` are git-ignored and cached locally; `npm run build` is near-instant on a clean tree.
 
 There are no tests in this repo. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) only runs `npm ci` + `npm run build`. Don't claim "tests pass" — there are none.
 
@@ -77,8 +80,8 @@ The full pattern is documented in [.cursor/rules/mcp-server-creation.mdc](.curso
 ## When adding a new server
 
 1. Scaffold `servers/<name>/` matching the layout above.
-2. Add the workspace entry implicitly via `servers/*` (already wildcarded in root [package.json](package.json)) and **append it to the root `build` script in dependency order** — `unified-mcp` last.
-3. If the server should be aggregated, register its tools in `servers/unified-mcp/src/registry/toolRegistry.ts` and add its API config block to `servers/unified-mcp/config.json`.
+2. The workspace is auto-discovered via the `servers/*` glob — no root edit needed.
+3. If the server should be aggregated, **add it as a `"*"` dep in `servers/unified-mcp/package.json`** (so turbo orders it before `unified-mcp:build`), then register its tools in `servers/unified-mcp/src/registry/toolRegistry.ts` and add its API config block to `servers/unified-mcp/config.json`.
 4. Update [README.md](README.md) (Servers table + Quick Start) and [CHANGELOG.md](CHANGELOG.md).
 5. Pick a free port in the 35xx range (or 8xxx for aggregators).
 
@@ -86,5 +89,5 @@ The full pattern is documented in [.cursor/rules/mcp-server-creation.mdc](.curso
 
 - Don't introduce a test framework or lint config without being asked — none exist today.
 - Don't add API-key handling. The "no API key required" property is a feature.
-- Don't change the build ordering scheme to a generic graph builder; the explicit `-w` chain in root `package.json` is intentional and dependency-correct.
+- Don't replace turbo with a hand-rolled `-w` chain. Build order comes from workspace dependencies + `dependsOn: ["^build"]`; that's how a new aggregated server gets ordered without editing root scripts.
 - Don't write to stdout from any server — it breaks stdio transport. Use `console.error`.
