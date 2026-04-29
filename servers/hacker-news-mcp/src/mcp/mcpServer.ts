@@ -164,6 +164,7 @@ export class MCPServer {
           'X-Session-Id',
           'Accept',
           'Mcp-Session-Id',
+          'Mcp-Protocol-Version',
         ],
         exposedHeaders: ['Mcp-Session-Id'],
       })

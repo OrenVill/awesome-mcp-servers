@@ -154,7 +154,7 @@ export class MCPServer {
         origin: true,
         credentials: false,
         methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id', 'Accept', 'Mcp-Session-Id'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id', 'Accept', 'Mcp-Session-Id', 'Mcp-Protocol-Version'],
         exposedHeaders: ['Mcp-Session-Id'],
       })
     );
