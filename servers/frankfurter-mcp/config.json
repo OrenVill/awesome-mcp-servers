@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3508,
+    "serverName": "frankfurter-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.frankfurter.app",
+    "timeoutMs": 15000
+  }
+}

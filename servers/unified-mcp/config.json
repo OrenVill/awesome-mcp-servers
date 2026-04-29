@@ -28,6 +28,57 @@
       "firebaseBaseUrl": "https://hacker-news.firebaseio.com/v0",
       "algoliaBaseUrl": "https://hn.algolia.com/api/v1",
       "timeoutMs": 15000
+    },
+    "arxiv": {
+      "baseUrl": "http://export.arxiv.org/api/query",
+      "timeoutMs": 15000
+    },
+    "openLibrary": {
+      "baseUrl": "https://openlibrary.org",
+      "timeoutMs": 15000
+    },
+    "nominatim": {
+      "baseUrl": "https://nominatim.openstreetmap.org",
+      "timeoutMs": 15000,
+      "userAgent": "unified-mcp/1.0 (https://github.com/awesome-mcp-servers)"
+    },
+    "dictionary": {
+      "baseUrl": "https://api.dictionaryapi.dev/api/v2",
+      "timeoutMs": 15000
+    },
+    "frankfurter": {
+      "baseUrl": "https://api.frankfurter.app",
+      "timeoutMs": 15000
+    },
+    "usgs": {
+      "baseUrl": "https://earthquake.usgs.gov/fdsnws/event/1",
+      "timeoutMs": 15000
+    },
+    "spacex": {
+      "baseUrl": "https://api.spacexdata.com/v4",
+      "timeoutMs": 15000
+    },
+    "githubPublic": {
+      "baseUrl": "https://api.github.com",
+      "timeoutMs": 15000
+    },
+    "mdn": {
+      "searchBaseUrl": "https://developer.mozilla.org/api/v1/search",
+      "docsBaseUrl": "https://developer.mozilla.org",
+      "timeoutMs": 15000
+    },
+    "datamuse": {
+      "baseUrl": "https://api.datamuse.com",
+      "timeoutMs": 15000
+    },
+    "trivia": {
+      "baseUrl": "https://opentdb.com",
+      "timeoutMs": 15000
+    },
+    "crossref": {
+      "baseUrl": "https://api.crossref.org",
+      "timeoutMs": 15000,
+      "mailto": ""
     }
   }
 }
