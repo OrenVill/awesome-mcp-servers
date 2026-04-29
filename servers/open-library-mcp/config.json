@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3505,
+    "serverName": "open-library-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://openlibrary.org",
+    "timeoutMs": 15000
+  }
+}

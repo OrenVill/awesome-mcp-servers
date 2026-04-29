@@ -1,0 +1,32 @@
+{
+  "name": "usgs-earthquake-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for the USGS Earthquake Catalog API - query earthquakes by region, magnitude, and time",
+  "main": "dist/app.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/app.js",
+    "dev": "ts-node --esm src/app.ts",
+    "start:stdio": "MCP_TRANSPORT=stdio node dist/app.js",
+    "start:http": "MCP_TRANSPORT=http node dist/app.js"
+  },
+  "keywords": ["mcp", "usgs", "earthquake", "fdsn", "model-context-protocol"],
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.5",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "ts-node": "^10.9.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

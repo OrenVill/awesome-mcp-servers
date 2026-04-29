@@ -27,11 +27,86 @@ export interface HackerNewsApiConfig {
   timeoutMs: number;
 }
 
+export interface ArxivApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface OpenLibraryApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface NominatimApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+  userAgent: string;
+}
+
+export interface DictionaryApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface FrankfurterApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface UsgsApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface SpacexApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface GithubPublicApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface MdnApiConfig {
+  searchBaseUrl: string;
+  docsBaseUrl: string;
+  timeoutMs: number;
+}
+
+export interface DatamuseApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface TriviaApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+}
+
+export interface CrossrefApiConfig {
+  baseUrl: string;
+  timeoutMs: number;
+  mailto: string;
+}
+
 export interface ApiConfig {
   openMeteo: OpenMeteoApiConfig;
   restCountries: RestCountriesApiConfig;
   wikipedia: WikipediaApiConfig;
   hackerNews: HackerNewsApiConfig;
+  arxiv: ArxivApiConfig;
+  openLibrary: OpenLibraryApiConfig;
+  nominatim: NominatimApiConfig;
+  dictionary: DictionaryApiConfig;
+  frankfurter: FrankfurterApiConfig;
+  usgs: UsgsApiConfig;
+  spacex: SpacexApiConfig;
+  githubPublic: GithubPublicApiConfig;
+  mdn: MdnApiConfig;
+  datamuse: DatamuseApiConfig;
+  trivia: TriviaApiConfig;
+  crossref: CrossrefApiConfig;
 }
 
 export interface MCPConfig {
@@ -70,7 +145,7 @@ const DEFAULT_CONFIG: ServiceConfig = {
   mcp: {
     enabled: true,
     transport: 'both',
-    httpPort: 3000,
+    httpPort: 8000,
     serverName: 'unified-mcp',
     serverVersion: '1.0.0',
     popularTools: ['get_current_weather', 'search_wikipedia', 'get_top_stories'],
@@ -97,6 +172,57 @@ const DEFAULT_CONFIG: ServiceConfig = {
       algoliaBaseUrl: 'https://hn.algolia.com/api/v1',
       timeoutMs: 15000,
     },
+    arxiv: {
+      baseUrl: 'http://export.arxiv.org/api/query',
+      timeoutMs: 15000,
+    },
+    openLibrary: {
+      baseUrl: 'https://openlibrary.org',
+      timeoutMs: 15000,
+    },
+    nominatim: {
+      baseUrl: 'https://nominatim.openstreetmap.org',
+      timeoutMs: 15000,
+      userAgent: 'unified-mcp/1.0 (https://github.com/awesome-mcp-servers)',
+    },
+    dictionary: {
+      baseUrl: 'https://api.dictionaryapi.dev/api/v2',
+      timeoutMs: 15000,
+    },
+    frankfurter: {
+      baseUrl: 'https://api.frankfurter.app',
+      timeoutMs: 15000,
+    },
+    usgs: {
+      baseUrl: 'https://earthquake.usgs.gov/fdsnws/event/1',
+      timeoutMs: 15000,
+    },
+    spacex: {
+      baseUrl: 'https://api.spacexdata.com/v4',
+      timeoutMs: 15000,
+    },
+    githubPublic: {
+      baseUrl: 'https://api.github.com',
+      timeoutMs: 15000,
+    },
+    mdn: {
+      searchBaseUrl: 'https://developer.mozilla.org/api/v1/search',
+      docsBaseUrl: 'https://developer.mozilla.org',
+      timeoutMs: 15000,
+    },
+    datamuse: {
+      baseUrl: 'https://api.datamuse.com',
+      timeoutMs: 15000,
+    },
+    trivia: {
+      baseUrl: 'https://opentdb.com',
+      timeoutMs: 15000,
+    },
+    crossref: {
+      baseUrl: 'https://api.crossref.org',
+      timeoutMs: 15000,
+      mailto: '',
+    },
   },
 };
 
@@ -111,6 +237,11 @@ function loadConfig(): ServiceConfig {
 
 const fileConfig = loadConfig();
 
+function intEnv(name: string, fallback: number): number {
+  const v = process.env[name];
+  return v ? parseInt(v, 10) : fallback;
+}
+
 export function getConfig(): ServiceConfig {
   const transport =
     (process.env.MCP_TRANSPORT as 'stdio' | 'http' | 'both') ??
@@ -120,10 +251,7 @@ export function getConfig(): ServiceConfig {
     mcp: {
       enabled: process.env.ENABLE_MCP_SERVER !== 'false' && fileConfig.mcp.enabled,
       transport,
-      httpPort: parseInt(
-        process.env.MCP_HTTP_PORT ?? String(fileConfig.mcp.httpPort),
-        10
-      ),
+      httpPort: intEnv('MCP_HTTP_PORT', fileConfig.mcp.httpPort),
       serverName: process.env.MCP_SERVER_NAME ?? fileConfig.mcp.serverName,
       serverVersion: process.env.MCP_SERVER_VERSION ?? fileConfig.mcp.serverVersion,
       popularTools: fileConfig.mcp.popularTools,
@@ -139,21 +267,13 @@ export function getConfig(): ServiceConfig {
         forecastBaseUrl:
           process.env.OPEN_METEO_FORECAST_URL ??
           fileConfig.api.openMeteo.forecastBaseUrl,
-        timeoutMs: parseInt(
-          process.env.OPEN_METEO_TIMEOUT_MS ??
-            String(fileConfig.api.openMeteo.timeoutMs),
-          10
-        ),
+        timeoutMs: intEnv('OPEN_METEO_TIMEOUT_MS', fileConfig.api.openMeteo.timeoutMs),
       },
       restCountries: {
         baseUrl:
           process.env.REST_COUNTRIES_BASE_URL ??
           fileConfig.api.restCountries.baseUrl,
-        timeoutMs: parseInt(
-          process.env.REST_COUNTRIES_TIMEOUT_MS ??
-            String(fileConfig.api.restCountries.timeoutMs),
-          10
-        ),
+        timeoutMs: intEnv('REST_COUNTRIES_TIMEOUT_MS', fileConfig.api.restCountries.timeoutMs),
       },
       wikipedia: {
         restBaseUrl:
@@ -162,11 +282,7 @@ export function getConfig(): ServiceConfig {
         mediaWikiBaseUrl:
           process.env.WIKIPEDIA_MEDIAWIKI_BASE_URL ??
           fileConfig.api.wikipedia.mediaWikiBaseUrl,
-        timeoutMs: parseInt(
-          process.env.WIKIPEDIA_TIMEOUT_MS ??
-            String(fileConfig.api.wikipedia.timeoutMs),
-          10
-        ),
+        timeoutMs: intEnv('WIKIPEDIA_TIMEOUT_MS', fileConfig.api.wikipedia.timeoutMs),
       },
       hackerNews: {
         firebaseBaseUrl:
@@ -175,11 +291,65 @@ export function getConfig(): ServiceConfig {
         algoliaBaseUrl:
           process.env.HACKER_NEWS_ALGOLIA_URL ??
           fileConfig.api.hackerNews.algoliaBaseUrl,
-        timeoutMs: parseInt(
-          process.env.HACKER_NEWS_TIMEOUT_MS ??
-            String(fileConfig.api.hackerNews.timeoutMs),
-          10
-        ),
+        timeoutMs: intEnv('HACKER_NEWS_TIMEOUT_MS', fileConfig.api.hackerNews.timeoutMs),
+      },
+      arxiv: {
+        baseUrl: process.env.ARXIV_BASE_URL ?? fileConfig.api.arxiv.baseUrl,
+        timeoutMs: intEnv('ARXIV_TIMEOUT_MS', fileConfig.api.arxiv.timeoutMs),
+      },
+      openLibrary: {
+        baseUrl:
+          process.env.OPEN_LIBRARY_BASE_URL ?? fileConfig.api.openLibrary.baseUrl,
+        timeoutMs: intEnv('OPEN_LIBRARY_TIMEOUT_MS', fileConfig.api.openLibrary.timeoutMs),
+      },
+      nominatim: {
+        baseUrl: process.env.NOMINATIM_BASE_URL ?? fileConfig.api.nominatim.baseUrl,
+        timeoutMs: intEnv('NOMINATIM_TIMEOUT_MS', fileConfig.api.nominatim.timeoutMs),
+        userAgent:
+          process.env.NOMINATIM_USER_AGENT ?? fileConfig.api.nominatim.userAgent,
+      },
+      dictionary: {
+        baseUrl:
+          process.env.DICTIONARY_BASE_URL ?? fileConfig.api.dictionary.baseUrl,
+        timeoutMs: intEnv('DICTIONARY_TIMEOUT_MS', fileConfig.api.dictionary.timeoutMs),
+      },
+      frankfurter: {
+        baseUrl:
+          process.env.FRANKFURTER_BASE_URL ?? fileConfig.api.frankfurter.baseUrl,
+        timeoutMs: intEnv('FRANKFURTER_TIMEOUT_MS', fileConfig.api.frankfurter.timeoutMs),
+      },
+      usgs: {
+        baseUrl: process.env.USGS_BASE_URL ?? fileConfig.api.usgs.baseUrl,
+        timeoutMs: intEnv('USGS_TIMEOUT_MS', fileConfig.api.usgs.timeoutMs),
+      },
+      spacex: {
+        baseUrl: process.env.SPACEX_BASE_URL ?? fileConfig.api.spacex.baseUrl,
+        timeoutMs: intEnv('SPACEX_TIMEOUT_MS', fileConfig.api.spacex.timeoutMs),
+      },
+      githubPublic: {
+        baseUrl:
+          process.env.GITHUB_PUBLIC_BASE_URL ?? fileConfig.api.githubPublic.baseUrl,
+        timeoutMs: intEnv('GITHUB_PUBLIC_TIMEOUT_MS', fileConfig.api.githubPublic.timeoutMs),
+      },
+      mdn: {
+        searchBaseUrl:
+          process.env.MDN_SEARCH_BASE_URL ?? fileConfig.api.mdn.searchBaseUrl,
+        docsBaseUrl:
+          process.env.MDN_DOCS_BASE_URL ?? fileConfig.api.mdn.docsBaseUrl,
+        timeoutMs: intEnv('MDN_TIMEOUT_MS', fileConfig.api.mdn.timeoutMs),
+      },
+      datamuse: {
+        baseUrl: process.env.DATAMUSE_BASE_URL ?? fileConfig.api.datamuse.baseUrl,
+        timeoutMs: intEnv('DATAMUSE_TIMEOUT_MS', fileConfig.api.datamuse.timeoutMs),
+      },
+      trivia: {
+        baseUrl: process.env.TRIVIA_BASE_URL ?? fileConfig.api.trivia.baseUrl,
+        timeoutMs: intEnv('TRIVIA_TIMEOUT_MS', fileConfig.api.trivia.timeoutMs),
+      },
+      crossref: {
+        baseUrl: process.env.CROSSREF_BASE_URL ?? fileConfig.api.crossref.baseUrl,
+        timeoutMs: intEnv('CROSSREF_TIMEOUT_MS', fileConfig.api.crossref.timeoutMs),
+        mailto: process.env.CROSSREF_MAILTO ?? fileConfig.api.crossref.mailto,
       },
     },
   };
