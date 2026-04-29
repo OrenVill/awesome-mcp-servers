@@ -5,7 +5,6 @@
   "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "prestart": "npm run build --prefix ../..",
     "build": "tsc",
     "start": "node dist/app.js",
     "start:stdio": "MCP_TRANSPORT=stdio node dist/app.js",
@@ -17,7 +16,11 @@
     "@modelcontextprotocol/sdk": "^1.22.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "open-meteo-mcp": "*",
+    "rest-countries-mcp": "*",
+    "wikipedia-mcp": "*",
+    "hacker-news-mcp": "*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
