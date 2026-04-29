@@ -20,45 +20,33 @@ From the repo root:
 
 ```bash
 npm install
-npm run build
+npm run build         # turbo builds all servers in dependency order (cached)
+npm start             # starts unified-mcp (HTTP+stdio) on port 8000
 ```
 
-### Unified server (all tools)
+Other root scripts (all powered by [turbo](https://turborepo.com)):
+
+| Script | What it does |
+|--------|-------------|
+| `npm run build` | Build every server. Cached — re-runs are near-instant. |
+| `npm start` | Start `unified-mcp` (default transport: both). |
+| `npm run start:http` | Start `unified-mcp` on HTTP only (port 8000). |
+| `npm run start:stdio` | Start `unified-mcp` on stdio only (Cursor / Claude Desktop). |
+| `npm run start:all` | Start every server in parallel. |
+
+### Running a single server
+
+Filter via turbo from the root:
 
 ```bash
-cd servers/unified-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 8000 (see config.json)
-# or
-MCP_TRANSPORT=stdio npm start  # Stdio for Cursor/Claude Desktop
+npx turbo run start:http --filter=open-meteo-mcp     # port 3500
+npx turbo run start:http --filter=rest-countries-mcp # port 3501
+npx turbo run start:http --filter=hacker-news-mcp    # port 3502
+npx turbo run start:http --filter=wikipedia-mcp      # port 3503
 ```
 
-### Individual servers
-
-Each server runs independently:
-
-```bash
-cd servers/open-meteo-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 3500
-# or
-MCP_TRANSPORT=stdio npm start
-```
-
-```bash
-cd servers/rest-countries-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 3501
-```
-
-```bash
-cd servers/hacker-news-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 3502
-```
-
-```bash
-cd servers/wikipedia-mcp
-MCP_TRANSPORT=http npm start   # HTTP on port 3503
-```
+Or `cd` into the server and use its own scripts (`npm start`, `npm run start:http`, `npm run start:stdio`).
 
 ## Known limitations
 
-- **Build order:** Run `npm run build` from repo root so sibling servers are built before unified-mcp.
 - **Rate limits:** External APIs (Open-Meteo, Wikipedia, etc.) may enforce rate limits; no keys = shared quotas.
