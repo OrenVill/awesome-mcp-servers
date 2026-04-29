@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3515,
+    "serverName": "crossref-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.crossref.org",
+    "timeoutMs": 15000,
+    "mailto": ""
+  }
+}

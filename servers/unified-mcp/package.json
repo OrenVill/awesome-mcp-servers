@@ -20,7 +20,19 @@
     "open-meteo-mcp": "*",
     "rest-countries-mcp": "*",
     "wikipedia-mcp": "*",
-    "hacker-news-mcp": "*"
+    "hacker-news-mcp": "*",
+    "arxiv-mcp": "*",
+    "open-library-mcp": "*",
+    "nominatim-mcp": "*",
+    "dictionary-mcp": "*",
+    "frankfurter-mcp": "*",
+    "usgs-earthquake-mcp": "*",
+    "spacex-mcp": "*",
+    "github-public-mcp": "*",
+    "mdn-compat-mcp": "*",
+    "datamuse-mcp": "*",
+    "trivia-mcp": "*",
+    "crossref-mcp": "*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

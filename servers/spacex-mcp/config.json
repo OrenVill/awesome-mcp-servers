@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3510,
+    "serverName": "spacex-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.spacexdata.com/v4",
+    "timeoutMs": 15000
+  }
+}

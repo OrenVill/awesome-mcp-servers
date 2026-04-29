@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3506,
+    "serverName": "nominatim-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://nominatim.openstreetmap.org",
+    "timeoutMs": 15000,
+    "userAgent": "nominatim-mcp/1.0 (https://github.com/awesome-mcp-servers)"
+  }
+}
