@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3507,
+    "serverName": "dictionary-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.dictionaryapi.dev/api/v2",
+    "timeoutMs": 15000
+  }
+}
