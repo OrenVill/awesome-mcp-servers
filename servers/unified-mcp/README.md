@@ -1,6 +1,6 @@
 # Unified MCP Server
 
-Single MCP server bundling all tools from weather, countries, Wikipedia, and Hacker News. Supports **popular tools** (top 5 by usage) and **search_tools** for discovery and execution of any tool by keyword. No API keys required.
+Single MCP server bundling all tools from weather, countries, Wikipedia, and Hacker News. Supports **popular tools** (top 5 by usage), **search_tools** for keyword-based discovery, and **execute_tools** for running one or more bundled tools in a single call. No API keys required.
 
 ## Tools
 
@@ -16,10 +16,15 @@ Default popular tools:
 
 ### search_tools (meta-tool)
 
-Discover and run any tool by keyword:
+Discover any tool by keyword:
 
-- **keywords** — Search terms (e.g. `"weather paris"`, `"countries"`). Returns up to 10 matching tools.
-- **execute** (optional) — `{ name, arguments }` to run a tool and return its result.
+- **keywords** — Search terms (e.g. `"weather paris"`, `"countries"`). Returns up to 10 matching tools with their input schemas.
+
+### execute_tools (meta-tool)
+
+Run one or more bundled tools in a single call. Tools execute in parallel; results return in the same order with the tool name and either content or an error:
+
+- **tools** — Array of `{ name, arguments? }`. `name` must match a tool from `search_tools`; `arguments` must match that tool's `inputSchema`.
 
 All bundled tools:
 

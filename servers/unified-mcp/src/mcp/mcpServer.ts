@@ -17,7 +17,7 @@ import { UsageTracker } from '../registry/usageTracker.js';
 const SEARCH_TOOLS_DEF: Tool = {
   name: 'search_tools',
   description:
-    "🔧 I'm searching tools to run\n\nThis server bundles tools across many free, no-key APIs: weather (Open-Meteo), countries (REST Countries), Wikipedia, Hacker News, arXiv, Open Library, OpenStreetMap geocoding (Nominatim), dictionary, FX rates (Frankfurter), USGS earthquakes, SpaceX, public GitHub, MDN docs, Datamuse word-finding, trivia, and Crossref scholarly metadata. Search by keywords; returns up to 10 matching tools. Optional execute: { name, arguments } runs a tool and returns its result.",
+    "🔧 I'm searching tools to run\n\nThis server bundles tools across many free, no-key APIs: weather (Open-Meteo), countries (REST Countries), Wikipedia, Hacker News, arXiv, Open Library, OpenStreetMap geocoding (Nominatim), dictionary, FX rates (Frankfurter), USGS earthquakes, SpaceX, public GitHub, MDN docs, Datamuse word-finding, trivia, and Crossref scholarly metadata. Search by keywords; returns up to 10 matching tools. Use execute_tools to run any of them.",
   inputSchema: {
     type: 'object',
     properties: {
@@ -26,19 +26,44 @@ const SEARCH_TOOLS_DEF: Tool = {
         description:
           'Keywords to match tool names and descriptions (e.g. "weather forecast", "country capital", "wikipedia article", "hacker news comments").',
       },
-      execute: {
-        type: 'object',
-        description:
-          'Optional. If provided, execute the specified tool and return its result.',
-        properties: {
-          name: { type: 'string' },
-          arguments: { type: 'object' },
-        },
-      },
     },
     required: ['keywords'],
   },
 };
+
+const EXECUTE_TOOLS_DEF: Tool = {
+  name: 'execute_tools',
+  description:
+    '⚡ Execute one or more bundled tools in a single call. Tools run in parallel; each result is returned in the same order with the tool name and either its content or an error message. Use search_tools first to discover tool names and argument schemas.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      tools: {
+        type: 'array',
+        description:
+          'Tools to execute in parallel. Each entry is { name, arguments? }.',
+        minItems: 1,
+        items: {
+          type: 'object',
+          properties: {
+            name: {
+              type: 'string',
+              description: 'Tool name as returned by search_tools.',
+            },
+            arguments: {
+              type: 'object',
+              description: 'Arguments matching the tool\'s inputSchema.',
+            },
+          },
+          required: ['name'],
+        },
+      },
+    },
+    required: ['tools'],
+  },
+};
+
+type ExecuteToolsCall = { name: string; arguments?: Record<string, unknown> };
 
 function log(server: string, event: string, data?: Record<string, unknown>): void {
   const prefix = `[${server}]`;
@@ -130,7 +155,11 @@ export class MCPServer {
 
     server.setRequestHandler(ListToolsRequestSchema, async () => {
       log(this.config.serverName, 'request', { method: 'tools/list' });
-      const tools: Tool[] = [...this.popularToolsToMCP(), SEARCH_TOOLS_DEF];
+      const tools: Tool[] = [
+        ...this.popularToolsToMCP(),
+        SEARCH_TOOLS_DEF,
+        EXECUTE_TOOLS_DEF,
+      ];
       return { tools };
     });
 
@@ -143,23 +172,6 @@ export class MCPServer {
       try {
         if (name === 'search_tools') {
           const keywords = String(safeArgs.keywords ?? '');
-          const execute = safeArgs.execute as
-            | { name?: string; arguments?: Record<string, unknown> }
-            | undefined;
-
-          if (execute !== undefined && execute !== null && execute.name) {
-            const toolName = String(execute.name);
-            const toolArgs = (execute.arguments ?? {}) as Record<string, unknown>;
-            const def = this.registry.get(toolName);
-            if (!def) {
-              throw new Error(`Unknown tool: ${toolName}`);
-            }
-            const result = await def.execute(toolArgs);
-            this.usageTracker.increment(toolName);
-            log(this.config.serverName, 'tool', { name: 'search_tools', execute: toolName, status: 'ok' });
-            return result;
-          }
-
           const matches = searchToolsByKeywords(this.registry, keywords, 10);
           const toolList = matches.map((t) => ({
             name: t.name,
@@ -168,6 +180,44 @@ export class MCPServer {
           }));
           const text = JSON.stringify({ tools: toolList }, null, 2);
           log(this.config.serverName, 'tool', { name: 'search_tools', matches: matches.length });
+          return { content: [{ type: 'text', text }] };
+        }
+
+        if (name === 'execute_tools') {
+          const calls = Array.isArray(safeArgs.tools)
+            ? (safeArgs.tools as ExecuteToolsCall[])
+            : [];
+          if (calls.length === 0) {
+            throw new Error('execute_tools requires a non-empty `tools` array');
+          }
+
+          const settled = await Promise.all(
+            calls.map(async (call) => {
+              const toolName = String(call?.name ?? '');
+              const toolArgs = (call?.arguments ?? {}) as Record<string, unknown>;
+              const def = this.registry.get(toolName);
+              if (!def) {
+                return { name: toolName, ok: false, error: `Unknown tool: ${toolName}` };
+              }
+              try {
+                const result = await def.execute(toolArgs);
+                this.usageTracker.increment(toolName);
+                return { name: toolName, ok: true, content: result.content };
+              } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                return { name: toolName, ok: false, error: message };
+              }
+            })
+          );
+
+          const okCount = settled.filter((r) => r.ok).length;
+          log(this.config.serverName, 'tool', {
+            name: 'execute_tools',
+            count: settled.length,
+            ok: okCount,
+            failed: settled.length - okCount,
+          });
+          const text = JSON.stringify({ results: settled }, null, 2);
           return { content: [{ type: 'text', text }] };
         }
 

@@ -8,7 +8,7 @@ Collection of API-specialized MCP (Model Context Protocol) servers. Each server 
 
 | Server | Description |
 |--------|-------------|
-| [unified-mcp](servers/unified-mcp/) | **All-in-one** — bundles every server below with popular tools + search_tools (no API key) |
+| [unified-mcp](servers/unified-mcp/) | **All-in-one** — bundles every server below with popular tools + search_tools / execute_tools (no API key) |
 | [open-meteo-mcp](servers/open-meteo-mcp/) | Weather API — location search, current weather, forecasts (no API key) |
 | [rest-countries-mcp](servers/rest-countries-mcp/) | Countries API — lookup by name/code, search by region/capital, list all (no API key) |
 | [wikipedia-mcp](servers/wikipedia-mcp/) | Wikipedia/MediaWiki API — search articles, get summaries and extracts (no API key) |
