@@ -1,0 +1,14 @@
+{
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "allow": [
+      "Bash(git -C /home/oren/code/awesome-mcp-servers push)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git -C /home/oren/code/mcp-explorer log --pretty=\"%h %s%n  authors: %an <%ae>%n  trailers: %\\(trailers:only=true\\)\")",
+      "Bash(git -C /home/oren/code/awesome-mcp-servers log --grep=\"Co-Authored-By: Claude\" --pretty=\"%h %s\")",
+      "Bash(gh api *)",
+      "Bash(git commit -m 'Add Logo component + favicon, drop awesome-mcp-servers references *)"
+    ]
+  }
+}
