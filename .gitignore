@@ -5,3 +5,11 @@ dist/
 .DS_Store
 .worktrees/
 .turbo/
+
+servers/*/.env
+servers/*/node_modules/
+servers/*/dist/
+servers/*/*.log
+servers/*/.DS_Store
+servers/*/.worktrees/
+servers/*/.turbo/

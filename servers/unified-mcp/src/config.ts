@@ -118,6 +118,7 @@ export interface MCPConfig {
   popularTools: string[];
   popularToolsCount: number;
   usageFile: string;
+  apiKeys: Record<string, string>;
 }
 
 export interface MCPServerConfig {
@@ -132,6 +133,7 @@ export interface MCPServerConfig {
   popularTools: string[];
   popularToolsCount: number;
   usageFile: string;
+  apiKeys: Record<string, string>;
 }
 
 export interface ServiceConfig {
@@ -151,6 +153,7 @@ const DEFAULT_CONFIG: ServiceConfig = {
     popularTools: ['get_current_weather', 'search_wikipedia', 'get_top_stories'],
     popularToolsCount: 5,
     usageFile: '~/.config/awesome-mcp-servers/unified-usage.json',
+    apiKeys: {},
   },
   api: {
     openMeteo: {
@@ -242,6 +245,33 @@ function intEnv(name: string, fallback: number): number {
   return v ? parseInt(v, 10) : fallback;
 }
 
+function parseApiKeys(
+  raw: string | undefined,
+  fallback: Record<string, string>
+): Record<string, string> {
+  if (!raw || !raw.trim()) return fallback;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new Error(
+      `UNIFIED_MCP_API_KEYS is not valid JSON (${msg}). Expected a {"name":"key"} object.`
+    );
+  }
+  if (
+    !parsed ||
+    typeof parsed !== 'object' ||
+    Array.isArray(parsed) ||
+    Object.values(parsed).some((v) => typeof v !== 'string' || !v)
+  ) {
+    throw new Error(
+      'UNIFIED_MCP_API_KEYS must be a JSON object of {"name":"key"} pairs with non-empty string values.'
+    );
+  }
+  return parsed as Record<string, string>;
+}
+
 export function getConfig(): ServiceConfig {
   const transport =
     (process.env.MCP_TRANSPORT as 'stdio' | 'http' | 'both') ??
@@ -258,6 +288,10 @@ export function getConfig(): ServiceConfig {
       popularToolsCount: fileConfig.mcp.popularToolsCount,
       usageFile:
         process.env.UNIFIED_MCP_USAGE_FILE ?? fileConfig.mcp.usageFile,
+      apiKeys: parseApiKeys(
+        process.env.UNIFIED_MCP_API_KEYS,
+        fileConfig.mcp.apiKeys ?? {}
+      ),
     },
     api: {
       openMeteo: {
@@ -371,5 +405,6 @@ export function getMCPConfig(): MCPServerConfig {
     popularTools: config.mcp.popularTools,
     popularToolsCount: config.mcp.popularToolsCount,
     usageFile: config.mcp.usageFile,
+    apiKeys: config.mcp.apiKeys,
   };
 }

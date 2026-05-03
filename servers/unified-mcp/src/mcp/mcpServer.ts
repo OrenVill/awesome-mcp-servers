@@ -110,12 +110,35 @@ export class MCPServer {
   private httpApp?: express.Application;
   private httpServer?: ReturnType<express.Application['listen']>;
   private transports: Map<string, StreamableHTTPServerTransport> = new Map();
+  private apiKeyByValue: Map<string, string>;
 
   constructor(config: MCPServerConfig) {
     this.config = config;
     this.registry = buildToolRegistry();
     this.usageTracker = new UsageTracker(config.usageFile);
     this.usageTracker.load();
+    this.apiKeyByValue = new Map(
+      Object.entries(config.apiKeys ?? {}).map(([name, key]) => [key, name])
+    );
+  }
+
+  private isAuthEnabled(): boolean {
+    return this.apiKeyByValue.size > 0;
+  }
+
+  private resolveCaller(req: express.Request): { name: string } | null {
+    const auth = req.headers.authorization;
+    let key: string | undefined;
+    if (typeof auth === 'string' && auth.startsWith('Bearer ')) {
+      key = auth.slice(7).trim();
+    }
+    if (!key) {
+      const xKey = req.headers['x-api-key'];
+      if (typeof xKey === 'string') key = xKey.trim();
+    }
+    if (!key) return null;
+    const name = this.apiKeyByValue.get(key);
+    return name ? { name } : null;
   }
 
   private getPopularToolNames(): string[] {
@@ -246,7 +269,11 @@ export class MCPServer {
   }
 
   async initialize(): Promise<void> {
-    // No async init needed
+    log(this.config.serverName, 'auth mode', {
+      authEnabled: this.isAuthEnabled(),
+      keyCount: this.apiKeyByValue.size,
+      clientNames: Array.from(this.apiKeyByValue.values()),
+    });
   }
 
   async startStdio(): Promise<void> {
@@ -276,7 +303,7 @@ export class MCPServer {
         origin: true,
         credentials: false,
         methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Session-Id', 'Accept', 'Mcp-Session-Id', 'Mcp-Protocol-Version'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-Id', 'Accept', 'Mcp-Session-Id', 'Mcp-Protocol-Version'],
         exposedHeaders: ['Mcp-Session-Id'],
       })
     );
@@ -293,8 +320,47 @@ export class MCPServer {
       });
     });
 
+    const oauthNotSupported = (req: express.Request, res: express.Response): void => {
+      log(this.config.serverName, 'oauth probe', { path: req.path, method: req.method });
+      res.status(404).json({
+        error: 'not_supported',
+        error_description:
+          'This server uses static API keys, not OAuth. Send Authorization: Bearer <key> or X-API-Key: <key>.',
+      });
+    };
+    this.httpApp.all('/.well-known/oauth-authorization-server', oauthNotSupported);
+    this.httpApp.all('/.well-known/oauth-protected-resource', oauthNotSupported);
+    this.httpApp.all('/.well-known/openid-configuration', oauthNotSupported);
+    this.httpApp.all('/register', oauthNotSupported);
+    this.httpApp.all('/authorize', oauthNotSupported);
+    this.httpApp.all('/token', oauthNotSupported);
+
     this.httpApp.all('/mcp', async (req, res) => {
       try {
+        if (this.isAuthEnabled()) {
+          const caller = this.resolveCaller(req);
+          if (!caller) {
+            log(this.config.serverName, 'auth rejected', {
+              path: '/mcp',
+              method: req.method,
+              reason: 'missing or invalid api key',
+            });
+            if (!res.headersSent) {
+              res.status(401).json({
+                jsonrpc: '2.0',
+                error: {
+                  code: -32001,
+                  message:
+                    'Unauthorized — this server uses static API keys (not OAuth). Send `Authorization: Bearer <key>` or `X-API-Key: <key>`.',
+                },
+                id: null,
+              });
+            }
+            return;
+          }
+          log(this.config.serverName, 'auth ok', { caller: caller.name });
+        }
+
         if (req.method === 'POST' && req.headers.accept) {
           const accept = req.headers.accept;
           if (!accept.includes('text/event-stream') || !accept.includes('application/json')) {
