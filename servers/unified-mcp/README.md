@@ -69,8 +69,52 @@ All bundled tools:
 | `MCP_TRANSPORT` | `mcp.transport` | `stdio`, `http`, or `both` |
 | `MCP_HTTP_PORT` | `mcp.httpPort` | HTTP server port (default: 8000) |
 | `UNIFIED_MCP_USAGE_FILE` | `mcp.usageFile` | Path for usage tracking JSON |
+| `UNIFIED_MCP_API_KEYS` | `mcp.apiKeys` | Optional JSON object of `{"name":"key"}` pairs. When set, HTTP `/mcp` requires `Authorization: Bearer <key>` (or `X-API-Key: <key>`). Stdio is unaffected. |
 
 API base URLs and timeouts are overridable via env (e.g. `OPEN_METEO_GEOCODING_URL`, `REST_COUNTRIES_BASE_URL`).
+
+## Client Authentication (HTTP)
+
+The HTTP transport is **open by default** so local development just works. To require a key from connecting clients, set `UNIFIED_MCP_API_KEYS` to a JSON object mapping a friendly name (used in logs) to a secret:
+
+```bash
+export UNIFIED_MCP_API_KEYS='{"alice":"sk-abc-123","claude-desktop":"sk-def-456"}'
+npm run start:http
+```
+
+Clients must then send one of:
+
+```http
+Authorization: Bearer sk-abc-123
+X-API-Key: sk-abc-123
+```
+
+Notes:
+
+- Stdio is **not** gated — owning the process is sufficient authority.
+- `GET /health` stays open so liveness probes don't need credentials.
+- Bad/missing keys return `401` with a JSON-RPC error. The 401 deliberately omits a `WWW-Authenticate: Bearer` header so MCP clients don't mistake this for an OAuth-protected resource and trigger OAuth discovery (`/.well-known/oauth-authorization-server`, `/register`, etc.). Those endpoints still return a clean JSON 404 if probed.
+- Keys live in env vars only — never in `config.json`. Use a `.env` file (loaded by dotenv) for local persistence.
+- The matched name is logged on each request (`auth ok caller=alice`); the key value is never logged.
+
+### Cursor / Claude Desktop with HTTP auth
+
+Cursor's MCP HTTP transport reads custom headers from a `headers` field — not `authorization` at the top level. Use:
+
+```json
+{
+  "mcpServers": {
+    "unified-mcp": {
+      "url": "http://localhost:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer sk-oren-123"
+      }
+    }
+  }
+}
+```
+
+If you put the auth value at the top level (e.g. `"authorization": "Bearer …"`), Cursor silently ignores it, the request goes out with no header, and you'll see a 401 followed by a confusing `Cannot POST /register` error as the client falls into OAuth discovery.
 
 ## Cursor Configuration
 
