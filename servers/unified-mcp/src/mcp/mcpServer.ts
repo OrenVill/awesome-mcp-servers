@@ -119,13 +119,19 @@ export class MCPServer {
   }
 
   private getPopularToolNames(): string[] {
-    const top = this.usageTracker.getTopN(5);
-    if (top.length > 0) {
-      return top.filter((name) => this.registry.has(name));
-    }
-    return this.config.popularTools
-      .slice(0, this.config.popularToolsCount)
-      .filter((name) => this.registry.has(name));
+    const limit = this.config.popularToolsCount;
+    const seen = new Set<string>();
+    const ordered: string[] = [];
+    const push = (name: string): void => {
+      if (ordered.length >= limit) return;
+      if (seen.has(name)) return;
+      if (!this.registry.has(name)) return;
+      seen.add(name);
+      ordered.push(name);
+    };
+    for (const name of this.usageTracker.getTopN(limit)) push(name);
+    for (const name of this.config.popularTools) push(name);
+    return ordered;
   }
 
   private popularToolsToMCP(): Tool[] {
