@@ -12,15 +12,14 @@ import {
 } from './weatherTools.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
 import { getConfig } from '../../config.js';
+import type { MCPToolCallResult } from '../types/mcpTypes.js';
 
 export type RegistryToolDefinition = {
   name: string;
   description: string;
   inputSchema: object;
   keywords: string[];
-  execute: (args: Record<string, unknown>) => Promise<{
-    content: Array<{ type: string; text: string }>;
-  }>;
+  execute: (args: Record<string, unknown>) => Promise<MCPToolCallResult>;
 };
 
 export function getOpenMeteoToolDefinitions(apiConfig?: {

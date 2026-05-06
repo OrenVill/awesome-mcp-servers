@@ -11,8 +11,13 @@ export interface MCPToolSchema {
 
 // MCP Response Format
 export interface MCPContentItem {
-  type: 'text';
-  text: string;
+  type: 'text' | 'resource';
+  text?: string;
+  resource?: {
+    uri: string;
+    text?: string;
+    mimeType?: string;
+  };
 }
 
 export interface MCPToolCallResult {

@@ -22,7 +22,15 @@ export type RegistryToolDefinition = {
   inputSchema: object;
   keywords: string[];
   execute: (args: Record<string, unknown>) => Promise<{
-    content: Array<{ type: string; text: string }>;
+    content: Array<{
+      type: string;
+      text?: string;
+      resource?: {
+        uri: string;
+        text?: string;
+        mimeType?: string;
+      };
+    }>;
   }>;
 };
 
