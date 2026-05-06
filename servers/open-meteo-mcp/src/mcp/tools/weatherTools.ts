@@ -214,7 +214,14 @@ export class WeatherTools {
       const text = this.formatCurrentWeatherAsText(data, label);
       const content: MCPContentItem[] = [{ type: 'text', text }];
       if (args.include_html_card === true) {
-        content.push({ type: 'text', text: this.formatCurrentWeatherAsHtml(data, label) });
+        content.push({
+          type: 'resource',
+          resource: {
+            uri: 'weather://current-card',
+            text: this.formatCurrentWeatherAsHtml(data, label),
+            mimeType: 'text/html',
+          },
+        });
       }
       return { content };
     } catch (err) {
@@ -250,7 +257,14 @@ export class WeatherTools {
       const text = this.formatForecastAsText(data, label);
       const content: MCPContentItem[] = [{ type: 'text', text }];
       if (args.include_html_card === true) {
-        content.push({ type: 'text', text: this.formatForecastAsHtml(data, label) });
+        content.push({
+          type: 'resource',
+          resource: {
+            uri: 'weather://forecast-card',
+            text: this.formatForecastAsHtml(data, label),
+            mimeType: 'text/html',
+          },
+        });
       }
       return { content };
     } catch (err) {
@@ -270,13 +284,13 @@ export class WeatherTools {
         const geo = await this.service.searchLocations({ name: city, count: 1 });
         const top = geo.results?.[0];
         if (!top) {
-          return { error: `Could not find coordinates for city: "${city}"` };
+          return { error: `Could not find coordinates for city: "${city}". Try passing explicit latitude and longitude.` };
         }
         const label = [top.name, top.admin1, top.country].filter(Boolean).join(', ');
         return { lat: top.latitude, lon: top.longitude, label };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        return { error: `Geocoding failed for "${city}": ${message}` };
+        return { error: `Geocoding failed for "${city}": ${message}. You can still call this tool with explicit latitude and longitude.` };
       }
     }
     const lat = args.latitude;
