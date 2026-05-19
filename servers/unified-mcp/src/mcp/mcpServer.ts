@@ -17,14 +17,15 @@ import { UsageTracker } from '../registry/usageTracker.js';
 const SEARCH_TOOLS_DEF: Tool = {
   name: 'search_tools',
   description:
-    "🔧 I'm searching tools to run\n\nThis server bundles tools across many free, no-key APIs: weather (Open-Meteo), countries (REST Countries), Wikipedia, Hacker News, arXiv, Open Library, OpenStreetMap geocoding (Nominatim), dictionary, FX rates (Frankfurter), USGS earthquakes, SpaceX, public GitHub, MDN docs, Datamuse word-finding, trivia, and Crossref scholarly metadata. Search by keywords; returns up to 10 matching tools. Use execute_tools to run any of them.",
+    "🔧 I'm searching tools to run\n\nThis server bundles tools across many free, no-key APIs: weather (Open-Meteo), countries (REST Countries), Wikipedia, Hacker News, arXiv, Open Library, OpenStreetMap geocoding (Nominatim), dictionary, FX rates (Frankfurter), USGS earthquakes, SpaceX, public GitHub, MDN docs, Datamuse word-finding, trivia, and Crossref scholarly metadata. Search by keywords; returns up to 10 matching tools. Pass \"*\" to list every available tool. Use execute_tools to run any of them.",
   inputSchema: {
     type: 'object',
     properties: {
       keywords: {
         type: 'string',
+        minLength: 1,
         description:
-          'Keywords to match tool names and descriptions (e.g. "weather forecast", "country capital", "wikipedia article", "hacker news comments").',
+          'Keywords to match tool names and descriptions (e.g. "weather forecast", "country capital", "wikipedia article", "hacker news comments"). Pass "*" to list every available tool. Minimum 1 character.',
       },
     },
     required: ['keywords'],
@@ -76,7 +77,15 @@ function searchToolsByKeywords(
   keywords: string,
   limit: number
 ): RegistryToolDefinition[] {
-  const terms = keywords
+  const trimmed = keywords.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+  if (trimmed === '*') {
+    return Array.from(registry.values());
+  }
+
+  const terms = trimmed
     .split(/\s+/)
     .filter(Boolean)
     .map((t) => t.toLowerCase());
