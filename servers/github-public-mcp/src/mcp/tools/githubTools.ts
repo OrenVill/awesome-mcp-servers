@@ -51,30 +51,54 @@ export const SEARCH_REPOS_DEF = {
 
 export interface GetRepoInput {
   owner: string;
-  repo: string;
+  repo: string | string[];
 }
 
 export interface GetUserInput {
-  username: string;
+  username: string | string[];
 }
 
 export interface ListRepoIssuesInput {
   owner: string;
-  repo: string;
+  repo: string | string[];
   state?: 'open' | 'closed' | 'all';
   limit?: number;
 }
 
 export interface ListRepoReleasesInput {
   owner: string;
-  repo: string;
+  repo: string | string[];
   limit?: number;
 }
 
 export interface SearchReposInput {
-  query: string;
+  query: string | string[];
   limit?: number;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class GithubTools {
   private service: GithubService;
@@ -100,10 +124,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login (user or organization), e.g. "vercel"',
           },
-          repo: {
-            type: 'string',
-            description: 'Repository name, e.g. "next.js"',
-          },
+          repo: stringOrArraySchema('Repository name, e.g. "next.js".'),
         },
         required: ['owner', 'repo'],
       },
@@ -115,10 +136,9 @@ export class GithubTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          username: {
-            type: 'string',
-            description: 'GitHub username or organization login, e.g. "torvalds"',
-          },
+          username: stringOrArraySchema(
+            'GitHub username or organization login, e.g. "torvalds".'
+          ),
         },
         required: ['username'],
       },
@@ -134,10 +154,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login',
           },
-          repo: {
-            type: 'string',
-            description: 'Repository name',
-          },
+          repo: stringOrArraySchema('Repository name.'),
           state: {
             type: 'string',
             description: 'Filter by issue state',
@@ -166,10 +183,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login',
           },
-          repo: {
-            type: 'string',
-            description: 'Repository name',
-          },
+          repo: stringOrArraySchema('Repository name.'),
           limit: {
             type: 'number',
             description: 'Maximum number of releases to return (1-100)',
@@ -188,11 +202,9 @@ export class GithubTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description:
-              'Search query (supports qualifiers like `language:typescript stars:>1000 topic:cli`)',
-          },
+          query: stringOrArraySchema(
+            'Search query (supports qualifiers like `language:typescript stars:>1000 topic:cli`).'
+          ),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -210,105 +222,169 @@ export class GithubTools {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    if (!args.repo || typeof args.repo !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'repo is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.repo);
+    if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'repo is required and must be a string or a non-empty array of strings'
+      );
     }
+    const owner = args.owner;
 
-    try {
-      const repo = await this.service.getRepo(args.owner, args.repo);
-      const text = this.formatRepoAsText(repo);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      return this.toErrorResult(err, `Failed to get repo ${args.owner}/${args.repo}`);
+    const sections = await Promise.all(
+      items.map(async (repo) => {
+        try {
+          const data = await this.service.getRepo(owner, repo);
+          return this.formatRepoAsText(data);
+        } catch (err) {
+          return this.formatErrorSection(err, `Failed to get repo ${owner}/${repo}`);
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetUser(args: GetUserInput): Promise<MCPToolCallResult> {
-    if (!args.username || typeof args.username !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'username is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.username);
+    if (items.length === 0 || items.some((u) => !u || typeof u !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'username is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const user = await this.service.getUser(args.username);
-      const text = this.formatUserAsText(user);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      return this.toErrorResult(err, `Failed to get user ${args.username}`);
+    const sections = await Promise.all(
+      items.map(async (username) => {
+        try {
+          const user = await this.service.getUser(username);
+          return this.formatUserAsText(user);
+        } catch (err) {
+          return this.formatErrorSection(err, `Failed to get user ${username}`);
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeListRepoIssues(args: ListRepoIssuesInput): Promise<MCPToolCallResult> {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    if (!args.repo || typeof args.repo !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'repo is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.repo);
+    if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'repo is required and must be a string or a non-empty array of strings'
+      );
     }
     if (args.state && !['open', 'closed', 'all'].includes(args.state)) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'state must be one of: open, closed, all');
     }
+    const owner = args.owner;
+    const state = args.state ?? 'open';
+    const limit = args.limit ?? 20;
 
-    try {
-      const issues = await this.service.listRepoIssues({
-        owner: args.owner,
-        repo: args.repo,
-        state: args.state ?? 'open',
-        limit: args.limit ?? 20,
-      });
-      const text = this.formatIssuesAsText(issues, args.owner, args.repo, args.state ?? 'open');
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      return this.toErrorResult(err, `Failed to list issues for ${args.owner}/${args.repo}`);
+    const sections = await Promise.all(
+      items.map(async (repo) => {
+        try {
+          const issues = await this.service.listRepoIssues({
+            owner,
+            repo,
+            state,
+            limit,
+          });
+          return this.formatIssuesAsText(issues, owner, repo, state);
+        } catch (err) {
+          return this.formatErrorSection(err, `Failed to list issues for ${owner}/${repo}`);
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeListRepoReleases(args: ListRepoReleasesInput): Promise<MCPToolCallResult> {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    if (!args.repo || typeof args.repo !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'repo is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.repo);
+    if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'repo is required and must be a string or a non-empty array of strings'
+      );
     }
+    const owner = args.owner;
+    const limit = args.limit ?? 10;
 
-    try {
-      const releases = await this.service.listRepoReleases({
-        owner: args.owner,
-        repo: args.repo,
-        limit: args.limit ?? 10,
-      });
-      const text = this.formatReleasesAsText(releases, args.owner, args.repo);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      return this.toErrorResult(err, `Failed to list releases for ${args.owner}/${args.repo}`);
+    const sections = await Promise.all(
+      items.map(async (repo) => {
+        try {
+          const releases = await this.service.listRepoReleases({
+            owner,
+            repo,
+            limit,
+          });
+          return this.formatReleasesAsText(releases, owner, repo);
+        } catch (err) {
+          return this.formatErrorSection(err, `Failed to list releases for ${owner}/${repo}`);
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSearchRepos(args: SearchReposInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
-    }
-
-    try {
-      const response = await this.service.searchRepos({
-        query: args.query,
-        limit: args.limit ?? 10,
-      });
-      const text = this.formatSearchReposAsText(response, args.query);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      return this.toErrorResult(err, `Failed to search repositories`);
-    }
-  }
-
-  private toErrorResult(err: unknown, prefix: string): MCPToolCallResult {
-    if (err instanceof GithubApiError && err.rateLimited) {
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
-        MCPErrorCode.API_ERROR,
-        err.message
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
       );
     }
+    const limit = args.limit ?? 10;
+
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const response = await this.service.searchRepos({
+            query,
+            limit,
+          });
+          return this.formatSearchReposAsText(response, query);
+        } catch (err) {
+          return this.formatErrorSection(err, `Failed to search repositories for "${query}"`);
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
+    }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
+  }
+
+  private formatErrorSection(err: unknown, prefix: string): string {
+    if (err instanceof GithubApiError && err.rateLimited) {
+      return `${prefix}: ${err.message}`;
+    }
     const message = err instanceof Error ? err.message : 'Unknown error';
-    return createMCPErrorResult(MCPErrorCode.API_ERROR, `${prefix}: ${message}`);
+    return `${prefix}: ${message}`;
   }
 
   private formatRepoAsText(repo: GithubRepo): string {

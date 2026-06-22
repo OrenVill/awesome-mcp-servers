@@ -38,23 +38,47 @@ export const GET_JOURNAL_DEF = {
 };
 
 export interface GetWorkInput {
-  doi: string;
+  doi: string | string[];
 }
 
 export interface SearchWorksInput {
-  query: string;
+  query: string | string[];
   limit?: number;
   filter?: string;
 }
 
 export interface SearchJournalsInput {
-  query: string;
+  query: string | string[];
   limit?: number;
 }
 
 export interface GetJournalInput {
-  issn: string;
+  issn: string | string[];
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class CrossrefTools {
   private service: CrossrefService;
@@ -77,10 +101,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          doi: {
-            type: 'string',
-            description: 'DOI of the work to look up (e.g. "10.1038/nphys1170")',
-          },
+          doi: stringOrArraySchema('DOI of the work to look up (e.g. "10.1038/nphys1170").'),
         },
         required: ['doi'],
       },
@@ -92,10 +113,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Free-text query to search Crossref works',
-          },
+          query: stringOrArraySchema('Free-text query to search Crossref works.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -119,10 +137,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Query to search journals by title or keywords',
-          },
+          query: stringOrArraySchema('Query to search journals by title or keywords.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -141,10 +156,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          issn: {
-            type: 'string',
-            description: 'ISSN of the journal (e.g. "2167-8359")',
-          },
+          issn: stringOrArraySchema('ISSN of the journal (e.g. "2167-8359").'),
         },
         required: ['issn'],
       },
@@ -152,23 +164,39 @@ export class CrossrefTools {
   }
 
   async executeGetWork(args: GetWorkInput): Promise<MCPToolCallResult> {
-    if (!args.doi || typeof args.doi !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'doi is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.doi);
+    if (items.length === 0 || items.some((d) => !d || typeof d !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'doi is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const work = await this.service.getWork(args.doi.trim());
-      const text = this.formatWorkAsText(work);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get work: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (doi) => {
+        try {
+          const work = await this.service.getWork(doi.trim());
+          return this.formatWorkAsText(work);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ${doi}\n\nFailed to get work: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSearchWorks(args: SearchWorksInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
 
     const limit = args.limit ?? 10;
@@ -176,24 +204,35 @@ export class CrossrefTools {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'limit must be a number between 1 and 100');
     }
 
-    try {
-      const message = await this.service.searchWorks({
-        query: args.query,
-        limit,
-        filter: args.filter,
-      });
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const message = await this.service.searchWorks({
+            query,
+            limit,
+            filter: args.filter,
+          });
+          return this.formatWorksListAsText(message.items, query, message['total-results']);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Crossref works search failed for "${query}": ${message}`;
+        }
+      })
+    );
 
-      const text = this.formatWorksListAsText(message.items, args.query, message['total-results']);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Crossref works search failed: ${message}`);
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSearchJournals(args: SearchJournalsInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
 
     const limit = args.limit ?? 10;
@@ -201,32 +240,49 @@ export class CrossrefTools {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'limit must be a number between 1 and 100');
     }
 
-    try {
-      const message = await this.service.searchJournals({ query: args.query, limit });
-      const text = this.formatJournalsListAsText(message.items, args.query, message['total-results']);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(
-        MCPErrorCode.API_ERROR,
-        `Crossref journals search failed: ${message}`
-      );
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const message = await this.service.searchJournals({ query, limit });
+          return this.formatJournalsListAsText(message.items, query, message['total-results']);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Crossref journals search failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetJournal(args: GetJournalInput): Promise<MCPToolCallResult> {
-    if (!args.issn || typeof args.issn !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'issn is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.issn);
+    if (items.length === 0 || items.some((i) => !i || typeof i !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'issn is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const journal = await this.service.getJournal(args.issn.trim());
-      const text = this.formatJournalAsText(journal);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get journal: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (issn) => {
+        try {
+          const journal = await this.service.getJournal(issn.trim());
+          return this.formatJournalAsText(journal);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ${issn}\n\nFailed to get journal: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   // ---------- formatting ----------

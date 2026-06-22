@@ -38,29 +38,53 @@ export const SUGGEST_DEF = {
 };
 
 export interface FindRhymesInput {
-  word: string;
+  word: string | string[];
   limit?: number;
 }
 
 export interface FindSynonymsInput {
-  word: string;
+  word: string | string[];
   limit?: number;
 }
 
 export interface MeansLikeInput {
-  query: string;
+  query: string | string[];
   limit?: number;
 }
 
 export interface SoundsLikeInput {
-  word: string;
+  word: string | string[];
   limit?: number;
 }
 
 export interface SuggestInput {
-  prefix: string;
+  prefix: string | string[];
   limit?: number;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class DatamuseTools {
   private service: DatamuseService;
@@ -82,10 +106,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'Word to find rhymes for (e.g. "moon")',
-          },
+          word: stringOrArraySchema('Word to find rhymes for (e.g. "moon").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -104,10 +125,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'Word to find synonyms for (e.g. "happy")',
-          },
+          word: stringOrArraySchema('Word to find synonyms for (e.g. "happy").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -126,10 +144,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Concept or phrase to search by meaning (multi-word allowed, e.g. "ringing in the ears")',
-          },
+          query: stringOrArraySchema('Concept or phrase to search by meaning (multi-word allowed, e.g. "ringing in the ears").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -148,10 +163,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'Word whose sound you want to match (e.g. "jirraf")',
-          },
+          word: stringOrArraySchema('Word whose sound you want to match (e.g. "jirraf").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -170,10 +182,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          prefix: {
-            type: 'string',
-            description: 'Prefix to autocomplete (e.g. "ele")',
-          },
+          prefix: stringOrArraySchema('Prefix to autocomplete (e.g. "ele").'),
           limit: {
             type: 'number',
             description: 'Maximum number of suggestions to return (1-50)',
@@ -188,83 +197,143 @@ export class DatamuseTools {
   }
 
   async executeFindRhymes(args: FindRhymesInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = this.clampLimit(args.limit, 1, 100, 20);
 
-    try {
-      const results = await this.service.findRhymes(args.word, limit);
-      const text = this.formatWordsAsText(results, `rhymes for "${args.word}"`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Datamuse find_rhymes failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const results = await this.service.findRhymes(word, limit);
+          return this.formatWordsAsText(results, `rhymes for "${word}"`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Datamuse find_rhymes failed for "${word}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeFindSynonyms(args: FindSynonymsInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = this.clampLimit(args.limit, 1, 100, 20);
 
-    try {
-      const results = await this.service.findSynonyms(args.word, limit);
-      const text = this.formatWordsAsText(results, `synonyms for "${args.word}"`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Datamuse find_synonyms failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const results = await this.service.findSynonyms(word, limit);
+          return this.formatWordsAsText(results, `synonyms for "${word}"`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Datamuse find_synonyms failed for "${word}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeMeansLike(args: MeansLikeInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = this.clampLimit(args.limit, 1, 100, 20);
 
-    try {
-      const results = await this.service.meansLike(args.query, limit);
-      const text = this.formatWordsAsText(results, `words meaning like "${args.query}"`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Datamuse means_like failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const results = await this.service.meansLike(query, limit);
+          return this.formatWordsAsText(results, `words meaning like "${query}"`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Datamuse means_like failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSoundsLike(args: SoundsLikeInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = this.clampLimit(args.limit, 1, 100, 20);
 
-    try {
-      const results = await this.service.soundsLike(args.word, limit);
-      const text = this.formatWordsAsText(results, `words that sound like "${args.word}"`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Datamuse sounds_like failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const results = await this.service.soundsLike(word, limit);
+          return this.formatWordsAsText(results, `words that sound like "${word}"`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Datamuse sounds_like failed for "${word}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSuggest(args: SuggestInput): Promise<MCPToolCallResult> {
-    if (!args.prefix || typeof args.prefix !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'prefix is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.prefix);
+    if (items.length === 0 || items.some((p) => !p || typeof p !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'prefix is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = this.clampLimit(args.limit, 1, 50, 10);
 
-    try {
-      const results = await this.service.suggest(args.prefix, limit);
-      const text = this.formatWordsAsText(results, `suggestions for "${args.prefix}"`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Datamuse suggest failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (prefix) => {
+        try {
+          const results = await this.service.suggest(prefix, limit);
+          return this.formatWordsAsText(results, `suggestions for "${prefix}"`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Datamuse suggest failed for "${prefix}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private clampLimit(value: unknown, min: number, max: number, fallback: number): number {

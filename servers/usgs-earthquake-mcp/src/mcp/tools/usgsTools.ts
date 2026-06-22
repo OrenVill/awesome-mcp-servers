@@ -66,8 +66,32 @@ export interface GetRecentSignificantInput {
 }
 
 export interface GetEventInput {
-  event_id: string;
+  event_id: string | string[];
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class UsgsTools {
   private service: UsgsService;
@@ -178,10 +202,7 @@ export class UsgsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          event_id: {
-            type: 'string',
-            description: 'USGS event ID (e.g. "nc73649170").',
-          },
+          event_id: stringOrArraySchema('USGS event ID (e.g. "nc73649170").'),
         },
         required: ['event_id'],
       },
@@ -276,32 +297,61 @@ export class UsgsTools {
   }
 
   async executeGetEvent(args: GetEventInput): Promise<MCPToolCallResult> {
-    if (!args.event_id || typeof args.event_id !== 'string') {
+    const { items, isBatch } = normalizeToArray(args.event_id);
+    if (
+      items.length === 0 ||
+      items.some((id) => !id || typeof id !== 'string')
+    ) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
-        'event_id is required and must be a string'
+        'event_id is required and must be a string or a non-empty array of strings'
       );
     }
 
-    try {
-      const response = await this.service.getEvent(args.event_id);
-      const features = response.features ?? [];
-      if (features.length === 0) {
+    // Single-value callers keep their original behaviour exactly: a missing
+    // event or a fetch failure surfaces as an MCP error result.
+    if (!isBatch) {
+      const eventId = items[0]!;
+      try {
+        const response = await this.service.getEvent(eventId);
+        const features = response.features ?? [];
+        if (features.length === 0) {
+          return createMCPErrorResult(
+            MCPErrorCode.API_ERROR,
+            `No earthquake event found with id: "${eventId}"`
+          );
+        }
+
+        const text = this.formatEventDetail(features[0]!);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
         return createMCPErrorResult(
           MCPErrorCode.API_ERROR,
-          `No earthquake event found with id: "${args.event_id}"`
+          `Failed to get event: ${message}`
         );
       }
-
-      const text = this.formatEventDetail(features[0]!);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(
-        MCPErrorCode.API_ERROR,
-        `Failed to get event: ${message}`
-      );
     }
+
+    // Batch: run concurrently and emit a per-item error section on failure
+    // instead of failing the whole batch.
+    const sections = await Promise.all(
+      items.map(async (eventId) => {
+        try {
+          const response = await this.service.getEvent(eventId);
+          const features = response.features ?? [];
+          if (features.length === 0) {
+            return `# ${eventId}\n\nNo earthquake event found with id: "${eventId}".`;
+          }
+          return this.formatEventDetail(features[0]!);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ${eventId}\n\nFailed to get event: ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private describeQuery(args: QueryEarthquakesInput, limit: number): string {
