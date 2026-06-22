@@ -37,7 +37,7 @@ function loadConfig(): ServiceConfig {
         serverVersion: '1.0.0',
       },
       api: {
-        baseUrl: 'https://restcountries.com/v3.1',
+        baseUrl: 'https://cdn.jsdelivr.net/gh/mledoze/countries@master/countries.json',
         timeoutMs: 15000,
       },
     };
