@@ -16,7 +16,7 @@
       "timeoutMs": 15000
     },
     "restCountries": {
-      "baseUrl": "https://restcountries.com/v3.1",
+      "baseUrl": "https://cdn.jsdelivr.net/gh/mledoze/countries@master/countries.json",
       "timeoutMs": 15000
     },
     "wikipedia": {
