@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **rest-countries-mcp** — restore functionality after the upstream
+  `restcountries.com/v3.1` API was deprecated/removed (it now 301-redirects to a
+  deprecation notice, and v5 requires an API key). The service now sources the
+  same data from the key-free `mledoze/countries` dataset (jsDelivr CDN),
+  fetched once and cached in memory, with all lookups filtered locally. Tool
+  names, schemas, and output formatting are unchanged (population is no longer
+  reported, as the dataset omits it).
+- **rest-countries-mcp** — harden the service so a deprecated/changed upstream
+  (any non-array or non-JSON response) raises a clear error instead of being
+  silently treated as "No country found", which previously caused models to
+  retry endlessly.
+
 ## [1.0.0] - 2025-03-22
 
 ### Added
