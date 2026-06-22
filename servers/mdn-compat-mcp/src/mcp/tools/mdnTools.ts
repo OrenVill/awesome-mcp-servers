@@ -14,37 +14,61 @@ import {
 export const SEARCH_MDN_DEF = {
   name: 'search_mdn',
   description:
-    "🔎 I'm searching MDN Web Docs\n\nSearch MDN documentation for HTML, CSS, JavaScript, and Web APIs. Returns document titles, slugs, summaries, and relevance scores. Use the slug from results with get_doc or get_browser_compat.",
+    "🔎 I'm searching MDN Web Docs\n\nSearch MDN documentation for HTML, CSS, JavaScript, and Web APIs. Returns document titles, slugs, summaries, and relevance scores. Use the slug from results with get_doc or get_browser_compat. Pass an array to run several searches at once in a single call.",
   keywords: ['mdn', 'search', 'docs', 'web', 'html', 'css', 'javascript', 'api'],
 };
 export const GET_DOC_DEF = {
   name: 'get_doc',
   description:
-    "📘 I'm loading MDN documentation\n\nFetch a full MDN doc by slug (e.g. `Web/API/fetch`, `Web/CSS/grid`). Returns title, summary, MDN URL, and a plain-text rendering of the body sections.",
+    "📘 I'm loading MDN documentation\n\nFetch a full MDN doc by slug (e.g. `Web/API/fetch`, `Web/CSS/grid`). Returns title, summary, MDN URL, and a plain-text rendering of the body sections. Pass an array of slugs to fetch several docs at once in a single call.",
   keywords: ['mdn', 'doc', 'documentation', 'reference', 'web-platform'],
 };
 export const GET_BROWSER_COMPAT_DEF = {
   name: 'get_browser_compat',
   description:
-    "🧭 I'm checking browser compatibility\n\nExtract browser support data from an MDN doc's compatibility section. Returns per-browser version_added, version_removed, and notes for the feature at the given slug.",
+    "🧭 I'm checking browser compatibility\n\nExtract browser support data from an MDN doc's compatibility section. Returns per-browser version_added, version_removed, and notes for the feature at the given slug. Pass an array of slugs to fetch several at once in a single call.",
   keywords: ['mdn', 'browser', 'compat', 'compatibility', 'support', 'caniuse'],
 };
 
 export interface SearchMdnInput {
-  query: string;
+  query: string | string[];
   locale?: string;
   limit?: number;
 }
 
 export interface GetDocInput {
-  slug: string;
+  slug: string | string[];
   locale?: string;
 }
 
 export interface GetBrowserCompatInput {
-  slug: string;
+  slug: string | string[];
   locale?: string;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class MdnTools {
   private service: MdnService;
@@ -67,10 +91,7 @@ export class MdnTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Search query for MDN docs (e.g. "fetch", "css grid", "Array.map")',
-          },
+          query: stringOrArraySchema('Search query for MDN docs (e.g. "fetch", "css grid", "Array.map").'),
           locale: {
             type: 'string',
             description: 'Locale code (default "en-US")',
@@ -94,10 +115,7 @@ export class MdnTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          slug: {
-            type: 'string',
-            description: 'MDN doc slug, e.g. "Web/API/fetch" or "Web/CSS/grid"',
-          },
+          slug: stringOrArraySchema('MDN doc slug, e.g. "Web/API/fetch" or "Web/CSS/grid".'),
           locale: {
             type: 'string',
             description: 'Locale code (default "en-US")',
@@ -114,10 +132,7 @@ export class MdnTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          slug: {
-            type: 'string',
-            description: 'MDN doc slug whose browser compatibility table you want',
-          },
+          slug: stringOrArraySchema('MDN doc slug whose browser compatibility table you want.'),
           locale: {
             type: 'string',
             description: 'Locale code (default "en-US")',
@@ -130,66 +145,106 @@ export class MdnTools {
   }
 
   async executeSearchMdn(args: SearchMdnInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = args.limit ?? 10;
     if (limit < 1 || limit > 50) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'limit must be between 1 and 50');
     }
+    const locale = args.locale ?? 'en-US';
 
-    try {
-      const response = await this.service.search({
-        query: args.query,
-        locale: args.locale ?? 'en-US',
-        limit,
-      });
-      const docs = response.documents ?? [];
-      const text = this.formatSearchResultsAsText(docs, args.query);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `MDN search failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const response = await this.service.search({ query, locale, limit });
+          const docs = response.documents ?? [];
+          return this.formatSearchResultsAsText(docs, query);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `MDN search failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetDoc(args: GetDocInput): Promise<MCPToolCallResult> {
-    if (!args.slug || typeof args.slug !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'slug is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.slug);
+    if (items.length === 0 || items.some((s) => !s || typeof s !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'slug is required and must be a string or a non-empty array of strings'
+      );
+    }
+    const locale = args.locale ?? 'en-US';
+
+    // Preserve exact single-value behaviour: a missing doc returns an error result.
+    if (!isBatch) {
+      try {
+        const doc = await this.service.getDoc({ slug: items[0], locale });
+        if (!doc) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, `MDN doc not found: "${items[0]}"`);
+        }
+        return { content: [{ type: 'text', text: this.formatDocAsText(doc) }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get MDN doc: ${message}`);
+      }
     }
 
-    try {
-      const doc = await this.service.getDoc({
-        slug: args.slug,
-        locale: args.locale ?? 'en-US',
-      });
-      if (!doc) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `MDN doc not found: "${args.slug}"`);
-      }
-      const text = this.formatDocAsText(doc);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get MDN doc: ${message}`);
-    }
+    const sections = await Promise.all(
+      items.map(async (slug) => {
+        try {
+          const doc = await this.service.getDoc({ slug, locale });
+          if (!doc) {
+            return `MDN doc not found: "${slug}"`;
+          }
+          return this.formatDocAsText(doc);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Failed to get MDN doc "${slug}": ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetBrowserCompat(args: GetBrowserCompatInput): Promise<MCPToolCallResult> {
-    if (!args.slug || typeof args.slug !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'slug is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.slug);
+    if (items.length === 0 || items.some((s) => !s || typeof s !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'slug is required and must be a string or a non-empty array of strings'
+      );
     }
+    const locale = args.locale ?? 'en-US';
 
-    try {
-      const support = await this.service.getBrowserCompat({
-        slug: args.slug,
-        locale: args.locale ?? 'en-US',
-      });
-      const text = this.formatBrowserCompatAsText(args.slug, support);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get browser compatibility: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (slug) => {
+        try {
+          const support = await this.service.getBrowserCompat({ slug, locale });
+          return this.formatBrowserCompatAsText(slug, support);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Failed to get browser compatibility for "${slug}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private formatSearchResultsAsText(docs: MdnSearchDocument[], query: string): string {
