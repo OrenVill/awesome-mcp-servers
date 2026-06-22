@@ -9,13 +9,13 @@ import { ArxivService, type ArxivPaper } from '../../services/arxivService.js';
 export const SEARCH_ARXIV_DEF = {
   name: 'search_arxiv',
   description:
-    "🔍 I'm searching arXiv\n\nSearch arXiv research papers by free-text query. Optionally filter by category (e.g. cs.AI). Returns titles, authors, IDs, and summaries.",
+    "🔍 I'm searching arXiv\n\nSearch arXiv research papers by free-text query. Optionally filter by category (e.g. cs.AI). Returns titles, authors, IDs, and summaries. Pass an array to run several searches at once in a single call.",
   keywords: ['arxiv', 'search', 'papers', 'research', 'preprint'],
 };
 export const GET_PAPER_DEF = {
   name: 'get_paper',
   description:
-    "📄 I'm fetching a paper\n\nFetch metadata for a single arXiv paper by ID (e.g. 2401.12345 or cs/0301001). Returns title, authors, summary, and category.",
+    "📄 I'm fetching a paper\n\nFetch metadata for a single arXiv paper by ID (e.g. 2401.12345 or cs/0301001). Returns title, authors, summary, and category. Pass an array of IDs to fetch several papers at once in a single call.",
   keywords: ['arxiv', 'paper', 'metadata', 'id', 'fetch'],
 };
 export const LIST_RECENT_DEF = {

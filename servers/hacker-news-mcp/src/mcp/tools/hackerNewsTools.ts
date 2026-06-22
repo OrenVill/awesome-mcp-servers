@@ -19,19 +19,19 @@ export const GET_TOP_STORIES_DEF = {
 export const GET_STORY_DEF = {
   name: 'get_story',
   description:
-    "📰 I'm fetching one HN story\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.",
+    "📰 I'm fetching one HN story\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text. Pass an array of IDs to fetch several stories at once in a single call.",
   keywords: ['hacker news', 'hn', 'story', 'item'],
 };
 export const GET_COMMENTS_DEF = {
   name: 'get_comments',
   description:
-    "💬 I'm loading comment threads\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit.",
+    "💬 I'm loading comment threads\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit. Pass an array of story IDs to fetch several at once in a single call.",
   keywords: ['hacker news', 'hn', 'comments', 'discussion'],
 };
 export const SEARCH_HN_DEF = {
   name: 'search_hn',
   description:
-    "🔍 I'm searching Hacker News\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.",
+    "🔍 I'm searching Hacker News\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count. Pass an array to run several searches at once in a single call.",
   keywords: ['hacker news', 'hn', 'search'],
 };
 

@@ -14,19 +14,19 @@ import {
 export const SEARCH_MDN_DEF = {
   name: 'search_mdn',
   description:
-    "🔎 I'm searching MDN Web Docs\n\nSearch MDN documentation for HTML, CSS, JavaScript, and Web APIs. Returns document titles, slugs, summaries, and relevance scores. Use the slug from results with get_doc or get_browser_compat.",
+    "🔎 I'm searching MDN Web Docs\n\nSearch MDN documentation for HTML, CSS, JavaScript, and Web APIs. Returns document titles, slugs, summaries, and relevance scores. Use the slug from results with get_doc or get_browser_compat. Pass an array to run several searches at once in a single call.",
   keywords: ['mdn', 'search', 'docs', 'web', 'html', 'css', 'javascript', 'api'],
 };
 export const GET_DOC_DEF = {
   name: 'get_doc',
   description:
-    "📘 I'm loading MDN documentation\n\nFetch a full MDN doc by slug (e.g. `Web/API/fetch`, `Web/CSS/grid`). Returns title, summary, MDN URL, and a plain-text rendering of the body sections.",
+    "📘 I'm loading MDN documentation\n\nFetch a full MDN doc by slug (e.g. `Web/API/fetch`, `Web/CSS/grid`). Returns title, summary, MDN URL, and a plain-text rendering of the body sections. Pass an array of slugs to fetch several docs at once in a single call.",
   keywords: ['mdn', 'doc', 'documentation', 'reference', 'web-platform'],
 };
 export const GET_BROWSER_COMPAT_DEF = {
   name: 'get_browser_compat',
   description:
-    "🧭 I'm checking browser compatibility\n\nExtract browser support data from an MDN doc's compatibility section. Returns per-browser version_added, version_removed, and notes for the feature at the given slug.",
+    "🧭 I'm checking browser compatibility\n\nExtract browser support data from an MDN doc's compatibility section. Returns per-browser version_added, version_removed, and notes for the feature at the given slug. Pass an array of slugs to fetch several at once in a single call.",
   keywords: ['mdn', 'browser', 'compat', 'compatibility', 'support', 'caniuse'],
 };
 
