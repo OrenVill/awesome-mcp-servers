@@ -10,7 +10,7 @@ import { OpenMeteoService } from '../../services/openMeteoService.js';
 export const SEARCH_LOCATIONS_DEF = {
   name: 'search_locations',
   description:
-    "📍 I'm finding place coordinates\n\nSearch for locations by name or postal code. Returns coordinates and timezone for use with weather tools. Use before get_current_weather or get_forecast when you only have a place name.",
+    "📍 I'm finding place coordinates\n\nSearch for locations by name or postal code. Returns coordinates and timezone for use with weather tools. Use before get_current_weather or get_forecast when you only have a place name. Pass an array of names to search several at once in a single call.",
   keywords: ['weather', 'location', 'city', 'search', 'geocode', 'coordinates'],
 };
 

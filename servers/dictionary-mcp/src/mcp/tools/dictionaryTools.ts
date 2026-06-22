@@ -14,19 +14,19 @@ import {
 export const DEFINE_WORD_DEF = {
   name: 'define_word',
   description:
-    "📚 I'm looking up word definitions\n\nGet the full dictionary entry for a word: phonetic, parts of speech, definitions, and example usages. Defaults to English.",
+    "📚 I'm looking up word definitions\n\nGet the full dictionary entry for a word: phonetic, parts of speech, definitions, and example usages. Defaults to English. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'definition', 'define', 'meaning', 'word', 'vocabulary'],
 };
 export const GET_SYNONYMS_DEF = {
   name: 'get_synonyms',
   description:
-    "🔁 I'm finding synonyms\n\nReturn synonyms for a word, grouped by part of speech, sourced from the dictionary entry.",
+    "🔁 I'm finding synonyms\n\nReturn synonyms for a word, grouped by part of speech, sourced from the dictionary entry. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'synonyms', 'thesaurus', 'similar', 'word', 'vocabulary'],
 };
 export const GET_PHONETICS_DEF = {
   name: 'get_phonetics',
   description:
-    "🔊 I'm fetching phonetics\n\nReturn IPA phonetic spellings and audio pronunciation URLs for a word.",
+    "🔊 I'm fetching phonetics\n\nReturn IPA phonetic spellings and audio pronunciation URLs for a word. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'phonetics', 'pronunciation', 'ipa', 'audio', 'word'],
 };
 
