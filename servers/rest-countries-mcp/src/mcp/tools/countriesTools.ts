@@ -10,13 +10,13 @@ import type { Country } from '../../services/restCountriesService.js';
 export const GET_COUNTRY_DEF = {
   name: 'get_country',
   description:
-    "🌍 I'm looking up countries\n\nLook up a country by name or alpha-2/alpha-3 code. Returns country details including capital, region, population, languages.",
+    "🌍 I'm looking up countries\n\nLook up a country by name or alpha-2/alpha-3 code. Returns country details including capital, region, population, languages. Pass an array of names/codes to look up several countries at once in a single call.",
   keywords: ['country', 'countries', 'geography', 'capital', 'region'],
 };
 export const SEARCH_COUNTRIES_DEF = {
   name: 'search_countries',
   description:
-    "🔎 I'm filtering country matches\n\nSearch countries by region, subregion, or capital city. Returns matching countries.",
+    "🔎 I'm filtering country matches\n\nSearch countries by region, subregion, or capital city. Returns matching countries. Pass an array of queries to run several searches at once in a single call.",
   keywords: ['country', 'countries', 'region', 'capital', 'search'],
 };
 export const LIST_ALL_COUNTRIES_DEF = {

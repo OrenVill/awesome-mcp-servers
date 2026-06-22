@@ -15,25 +15,25 @@ import {
 export const SEARCH_BOOKS_DEF = {
   name: 'search_books',
   description:
-    "🔍 I'm searching Open Library for books\n\nSearch Open Library by free-text query, author, or title. Returns matching titles with author, year, and Open Library work keys you can pass to get_work.",
+    "🔍 I'm searching Open Library for books\n\nSearch Open Library by free-text query, author, or title. Returns matching titles with author, year, and Open Library work keys you can pass to get_work. Pass an array to run several searches at once in a single call.",
   keywords: ['open-library', 'books', 'search', 'library', 'literature'],
 };
 export const GET_BOOK_BY_ISBN_DEF = {
   name: 'get_book_by_isbn',
   description:
-    "📚 I'm looking up a book by ISBN\n\nFetch a single book record from Open Library by ISBN-10 or ISBN-13. Returns title, authors, publisher, and edition details.",
+    "📚 I'm looking up a book by ISBN\n\nFetch a single book record from Open Library by ISBN-10 or ISBN-13. Returns title, authors, publisher, and edition details. Pass an array of ISBNs to fetch several books at once in a single call.",
   keywords: ['open-library', 'book', 'isbn', 'edition', 'lookup'],
 };
 export const GET_AUTHOR_DEF = {
   name: 'get_author',
   description:
-    "✍️ I'm loading an Open Library author\n\nGet author details by Open Library author key (e.g. `OL23919A`). Returns name, dates, biography, and alternate names.",
+    "✍️ I'm loading an Open Library author\n\nGet author details by Open Library author key (e.g. `OL23919A`). Returns name, dates, biography, and alternate names. Pass an array of IDs to fetch several authors at once in a single call.",
   keywords: ['open-library', 'author', 'writer', 'biography'],
 };
 export const GET_WORK_DEF = {
   name: 'get_work',
   description:
-    "📖 I'm loading an Open Library work\n\nGet work details by Open Library work key (e.g. `OL45804W`). Returns title, description, subjects, and linked authors.",
+    "📖 I'm loading an Open Library work\n\nGet work details by Open Library work key (e.g. `OL45804W`). Returns title, description, subjects, and linked authors. Pass an array of IDs to fetch several works at once in a single call.",
   keywords: ['open-library', 'work', 'book', 'literature'],
 };
 

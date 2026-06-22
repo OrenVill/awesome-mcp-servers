@@ -13,13 +13,13 @@ import {
 export const GEOCODE_DEF = {
   name: 'geocode',
   description:
-    "📍 I'm geocoding addresses\n\nForward geocode an address or place name to coordinates and structured address details via OpenStreetMap Nominatim. Returns up to N matches with lat/lon, display name, and address parts.",
+    "📍 I'm geocoding addresses\n\nForward geocode an address or place name to coordinates and structured address details via OpenStreetMap Nominatim. Returns up to N matches with lat/lon, display name, and address parts. Pass an array of queries to geocode several addresses at once in a single call.",
   keywords: ['nominatim', 'openstreetmap', 'geocode', 'address', 'search', 'location', 'coordinates'],
 };
 export const REVERSE_GEOCODE_DEF = {
   name: 'reverse_geocode',
   description:
-    "🗺️ I'm reverse-geocoding coordinates\n\nReverse geocode a latitude/longitude pair to a structured address via OpenStreetMap Nominatim. Returns the closest OSM object with display name and address parts.",
+    "🗺️ I'm reverse-geocoding coordinates\n\nReverse geocode a latitude/longitude pair to a structured address via OpenStreetMap Nominatim. Returns the closest OSM object with display name and address parts. Pass arrays of latitude/longitude (paired positionally) to reverse-geocode several points at once in a single call.",
   keywords: ['nominatim', 'openstreetmap', 'reverse', 'geocode', 'coordinates', 'address', 'latlon'],
 };
 export const LOOKUP_DEF = {

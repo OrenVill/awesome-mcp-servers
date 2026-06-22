@@ -17,35 +17,35 @@ import {
 export const GET_REPO_DEF = {
   name: 'get_repo',
   description:
-    "🐙 I'm fetching a GitHub repo\n\nGet metadata for a public GitHub repository (description, stars, forks, language, license, default branch, etc.). Unauthenticated — limited to ~60 requests/hour per IP.",
+    "🐙 I'm fetching a GitHub repo\n\nGet metadata for a public GitHub repository (description, stars, forks, language, license, default branch, etc.). Unauthenticated — limited to ~60 requests/hour per IP. Pass an array of repos (with one owner) to fetch several at once in a single call.",
   keywords: ['github', 'repo', 'repository', 'metadata', 'stars'],
 };
 
 export const GET_USER_DEF = {
   name: 'get_user',
   description:
-    "🐙 I'm fetching a GitHub user\n\nGet a public GitHub user or organization profile by username (name, bio, location, public repo count, followers). Unauthenticated — limited to ~60 requests/hour per IP.",
+    "🐙 I'm fetching a GitHub user\n\nGet a public GitHub user or organization profile by username (name, bio, location, public repo count, followers). Unauthenticated — limited to ~60 requests/hour per IP. Pass an array of usernames to fetch several at once in a single call.",
   keywords: ['github', 'user', 'profile', 'organization', 'developer'],
 };
 
 export const LIST_REPO_ISSUES_DEF = {
   name: 'list_repo_issues',
   description:
-    "🐙 I'm listing GitHub issues\n\nList issues for a public repository, filtered by state (open/closed/all). GitHub's API includes pull requests in this list. Unauthenticated — limited to ~60 requests/hour per IP.",
+    "🐙 I'm listing GitHub issues\n\nList issues for a public repository, filtered by state (open/closed/all). GitHub's API includes pull requests in this list. Unauthenticated — limited to ~60 requests/hour per IP. Pass an array of repos (with one owner) to handle several at once in a single call.",
   keywords: ['github', 'issues', 'bug', 'tracker', 'repo'],
 };
 
 export const LIST_REPO_RELEASES_DEF = {
   name: 'list_repo_releases',
   description:
-    "🐙 I'm listing GitHub releases\n\nList releases for a public repository (tag, name, published date, draft/prerelease flags). Unauthenticated — limited to ~60 requests/hour per IP.",
+    "🐙 I'm listing GitHub releases\n\nList releases for a public repository (tag, name, published date, draft/prerelease flags). Unauthenticated — limited to ~60 requests/hour per IP. Pass an array of repos (with one owner) to handle several at once in a single call.",
   keywords: ['github', 'releases', 'tags', 'versions', 'changelog'],
 };
 
 export const SEARCH_REPOS_DEF = {
   name: 'search_repos',
   description:
-    "🐙 I'm searching GitHub repos\n\nSearch public GitHub repositories with a query (supports GitHub search qualifiers like `language:`, `stars:>100`, `topic:`). Unauthenticated — limited to ~60 requests/hour per IP.",
+    "🐙 I'm searching GitHub repos\n\nSearch public GitHub repositories with a query (supports GitHub search qualifiers like `language:`, `stars:>100`, `topic:`). Unauthenticated — limited to ~60 requests/hour per IP. Pass an array to run several searches at once in a single call.",
   keywords: ['github', 'search', 'repository', 'discover', 'find'],
 };
 

@@ -34,13 +34,13 @@ const DEFAULT_DAILY = [
 export const GET_CURRENT_WEATHER_DEF = {
   name: 'get_current_weather',
   description:
-    "🌤️ I'm fetching current weather\n\nGet current weather for a location. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`.",
+    "🌤️ I'm fetching current weather\n\nGet current weather for a location. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`. Pass arrays of latitude/longitude (paired positionally) to fetch several locations at once in a single call.",
   keywords: ['weather', 'temperature', 'forecast', 'current', 'city'],
 };
 export const GET_FORECAST_DEF = {
   name: 'get_forecast',
   description:
-    "📅 I'm loading weather forecasts\n\nGet weather forecast for the next 1-16 days. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`.",
+    "📅 I'm loading weather forecasts\n\nGet weather forecast for the next 1-16 days. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`. Pass arrays of latitude/longitude (paired positionally) to fetch several locations at once in a single call.",
   keywords: ['weather', 'forecast', 'temperature', 'precipitation', 'city'],
 };
 

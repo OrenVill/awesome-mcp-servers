@@ -9,31 +9,31 @@ import { DatamuseService, type DatamuseWord } from '../../services/datamuseServi
 export const FIND_RHYMES_DEF = {
   name: 'find_rhymes',
   description:
-    "🔤 I'm finding rhymes\n\nFind words that rhyme with a given word using the Datamuse API. Useful for poetry, songwriting, and wordplay.",
+    "🔤 I'm finding rhymes\n\nFind words that rhyme with a given word using the Datamuse API. Useful for poetry, songwriting, and wordplay. Pass an array of words to handle several at once in a single call.",
   keywords: ['datamuse', 'rhymes', 'rhyme', 'words', 'poetry', 'songwriting'],
 };
 export const FIND_SYNONYMS_DEF = {
   name: 'find_synonyms',
   description:
-    "🔤 I'm finding synonyms\n\nFind synonyms for a given word using the Datamuse API. Returns words with the same or similar meaning.",
+    "🔤 I'm finding synonyms\n\nFind synonyms for a given word using the Datamuse API. Returns words with the same or similar meaning. Pass an array of words to handle several at once in a single call.",
   keywords: ['datamuse', 'synonyms', 'synonym', 'thesaurus', 'words', 'similar'],
 };
 export const MEANS_LIKE_DEF = {
   name: 'means_like',
   description:
-    "🔤 I'm finding words by meaning\n\nFind words with similar meaning to the query (concept search). Accepts multi-word phrases (e.g., \"ringing in the ears\").",
+    "🔤 I'm finding words by meaning\n\nFind words with similar meaning to the query (concept search). Accepts multi-word phrases (e.g., \"ringing in the ears\"). Pass an array to handle several queries at once in a single call.",
   keywords: ['datamuse', 'meaning', 'concept', 'related', 'words', 'definition'],
 };
 export const SOUNDS_LIKE_DEF = {
   name: 'sounds_like',
   description:
-    "🔤 I'm finding words that sound alike\n\nFind words that sound similar to the input word using the Datamuse API. Useful for phonetic matching and homophones.",
+    "🔤 I'm finding words that sound alike\n\nFind words that sound similar to the input word using the Datamuse API. Useful for phonetic matching and homophones. Pass an array of words to handle several at once in a single call.",
   keywords: ['datamuse', 'sounds', 'phonetic', 'homophone', 'words', 'pronunciation'],
 };
 export const SUGGEST_DEF = {
   name: 'suggest',
   description:
-    "🔤 I'm suggesting word completions\n\nGet autocomplete-style suggestions for a prefix using the Datamuse API. Returns likely word completions ranked by popularity.",
+    "🔤 I'm suggesting word completions\n\nGet autocomplete-style suggestions for a prefix using the Datamuse API. Returns likely word completions ranked by popularity. Pass an array of prefixes to handle several at once in a single call.",
   keywords: ['datamuse', 'suggest', 'autocomplete', 'completion', 'prefix', 'words'],
 };
 
