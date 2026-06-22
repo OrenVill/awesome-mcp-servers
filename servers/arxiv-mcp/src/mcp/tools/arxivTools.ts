@@ -9,13 +9,13 @@ import { ArxivService, type ArxivPaper } from '../../services/arxivService.js';
 export const SEARCH_ARXIV_DEF = {
   name: 'search_arxiv',
   description:
-    "🔍 I'm searching arXiv\n\nSearch arXiv research papers by free-text query. Optionally filter by category (e.g. cs.AI). Returns titles, authors, IDs, and summaries.",
+    "🔍 I'm searching arXiv\n\nSearch arXiv research papers by free-text query. Optionally filter by category (e.g. cs.AI). Returns titles, authors, IDs, and summaries. Pass an array to run several searches at once in a single call.",
   keywords: ['arxiv', 'search', 'papers', 'research', 'preprint'],
 };
 export const GET_PAPER_DEF = {
   name: 'get_paper',
   description:
-    "📄 I'm fetching a paper\n\nFetch metadata for a single arXiv paper by ID (e.g. 2401.12345 or cs/0301001). Returns title, authors, summary, and category.",
+    "📄 I'm fetching a paper\n\nFetch metadata for a single arXiv paper by ID (e.g. 2401.12345 or cs/0301001). Returns title, authors, summary, and category. Pass an array of IDs to fetch several papers at once in a single call.",
   keywords: ['arxiv', 'paper', 'metadata', 'id', 'fetch'],
 };
 export const LIST_RECENT_DEF = {
@@ -26,19 +26,43 @@ export const LIST_RECENT_DEF = {
 };
 
 export interface SearchArxivInput {
-  query: string;
+  query: string | string[];
   max_results?: number;
   category?: string;
 }
 
 export interface GetPaperInput {
-  id: string;
+  id: string | string[];
 }
 
 export interface ListRecentInput {
   category: string;
   max_results?: number;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class ArxivTools {
   private service: ArxivService;
@@ -62,10 +86,7 @@ export class ArxivTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Free-text search query for arXiv papers',
-          },
+          query: stringOrArraySchema('Free-text search query for arXiv papers.'),
           max_results: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -91,11 +112,9 @@ export class ArxivTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'string',
-            description:
-              'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format)',
-          },
+          id: stringOrArraySchema(
+            'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format).'
+          ),
         },
         required: ['id'],
       },
@@ -128,10 +147,11 @@ export class ArxivTools {
   }
 
   async executeSearchArxiv(args: SearchArxivInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
-        'query is required and must be a string'
+        'query is required and must be a string or a non-empty array of strings'
       );
     }
     if (args.category !== undefined && typeof args.category !== 'string') {
@@ -141,55 +161,83 @@ export class ArxivTools {
       );
     }
 
-    try {
-      const papers = await this.service.search({
-        query: args.query,
-        maxResults: args.max_results ?? 10,
-        category: args.category,
-      });
-      const text = formatPapersAsText(papers, {
-        emptyMessage: `No arXiv papers found for "${args.query}"${
-          args.category ? ` in ${args.category}` : ''
-        }.`,
-        header: `Found ${papers.length} arXiv paper(s) for "${args.query}"${
-          args.category ? ` in ${args.category}` : ''
-        }`,
-      });
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(
-        MCPErrorCode.API_ERROR,
-        `arXiv search failed: ${message}`
-      );
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const papers = await this.service.search({
+            query,
+            maxResults: args.max_results ?? 10,
+            category: args.category,
+          });
+          return formatPapersAsText(papers, {
+            emptyMessage: `No arXiv papers found for "${query}"${
+              args.category ? ` in ${args.category}` : ''
+            }.`,
+            header: `Found ${papers.length} arXiv paper(s) for "${query}"${
+              args.category ? ` in ${args.category}` : ''
+            }`,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `arXiv search failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetPaper(args: GetPaperInput): Promise<MCPToolCallResult> {
-    if (!args.id || typeof args.id !== 'string') {
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
-        'id is required and must be a string'
+        'id is required and must be a string or a non-empty array of strings'
       );
     }
 
-    try {
-      const paper = await this.service.getPaper(args.id);
-      if (!paper) {
+    // Preserve exact original behaviour for single (non-batch) callers:
+    // a missing paper or failure returns an MCP error result, not a section.
+    if (!isBatch) {
+      const id = items[0];
+      try {
+        const paper = await this.service.getPaper(id);
+        if (!paper) {
+          return createMCPErrorResult(
+            MCPErrorCode.API_ERROR,
+            `Paper not found: "${id}"`
+          );
+        }
+        const text = formatSinglePaperAsText(paper);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
         return createMCPErrorResult(
           MCPErrorCode.API_ERROR,
-          `Paper not found: "${args.id}"`
+          `Failed to get paper: ${message}`
         );
       }
-      const text = formatSinglePaperAsText(paper);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(
-        MCPErrorCode.API_ERROR,
-        `Failed to get paper: ${message}`
-      );
     }
+
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const paper = await this.service.getPaper(id);
+          if (!paper) {
+            return `# ${id}\n\nPaper not found.`;
+          }
+          return formatSinglePaperAsText(paper);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ${id}\n\nFailed to get paper: ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeListRecent(args: ListRecentInput): Promise<MCPToolCallResult> {

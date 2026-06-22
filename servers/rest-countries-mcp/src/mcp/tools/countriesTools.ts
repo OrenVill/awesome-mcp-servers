@@ -10,13 +10,13 @@ import type { Country } from '../../services/restCountriesService.js';
 export const GET_COUNTRY_DEF = {
   name: 'get_country',
   description:
-    "🌍 I'm looking up countries\n\nLook up a country by name or alpha-2/alpha-3 code. Returns country details including capital, region, population, languages.",
+    "🌍 I'm looking up countries\n\nLook up a country by name or alpha-2/alpha-3 code. Returns country details including capital, region, population, languages. Pass an array of names/codes to look up several countries at once in a single call.",
   keywords: ['country', 'countries', 'geography', 'capital', 'region'],
 };
 export const SEARCH_COUNTRIES_DEF = {
   name: 'search_countries',
   description:
-    "🔎 I'm filtering country matches\n\nSearch countries by region, subregion, or capital city. Returns matching countries.",
+    "🔎 I'm filtering country matches\n\nSearch countries by region, subregion, or capital city. Returns matching countries. Pass an array of queries to run several searches at once in a single call.",
   keywords: ['country', 'countries', 'region', 'capital', 'search'],
 };
 export const LIST_ALL_COUNTRIES_DEF = {
@@ -40,17 +40,41 @@ const DEFAULT_FIELDS = [
 ];
 
 export interface GetCountryInput {
-  nameOrCode: string;
+  nameOrCode: string | string[];
 }
 
 export interface SearchCountriesInput {
   searchType: 'region' | 'subregion' | 'capital';
-  query: string;
+  query: string | string[];
 }
 
 export interface ListAllCountriesInput {
   fields?: string;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class CountriesTools {
   private service: RestCountriesService;
@@ -74,11 +98,9 @@ export class CountriesTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          nameOrCode: {
-            type: 'string',
-            description:
-              'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per")',
-          },
+          nameOrCode: stringOrArraySchema(
+            'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").'
+          ),
         },
         required: ['nameOrCode'],
       },
@@ -97,10 +119,9 @@ export class CountriesTools {
             enum: ['region', 'subregion', 'capital'],
             description: 'Type of search: region (e.g. Europe, Americas), subregion (e.g. South America), or capital city',
           },
-          query: {
-            type: 'string',
-            description: 'Search value (e.g. "Europe", "South America", "Paris")',
-          },
+          query: stringOrArraySchema(
+            'Search value (e.g. "Europe", "South America", "Paris").'
+          ),
         },
         required: ['searchType', 'query'],
       },
@@ -127,48 +148,49 @@ export class CountriesTools {
   }
 
   async executeGetCountry(args: GetCountryInput): Promise<MCPToolCallResult> {
-    const input = args.nameOrCode?.trim();
-    if (!input) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'nameOrCode is required');
+    const { items, isBatch } = normalizeToArray(args.nameOrCode);
+    if (items.length === 0 || items.some((v) => !v || typeof v !== 'string' || !v.trim())) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'nameOrCode is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const isCode = input.length === 2 || input.length === 3;
-      let country: Country | Country[] | null = null;
+    const sections = await Promise.all(
+      items.map(async (raw) => {
+        const input = raw.trim();
+        try {
+          const isCode = input.length === 2 || input.length === 3;
+          let country: Country | Country[] | null = null;
 
-      if (isCode && /^[a-zA-Z]{2,3}$/.test(input)) {
-        country = await this.service.getByAlphaCode(input);
-      } else {
-        const results = await this.service.getByName(input);
-        country = results.length > 0 ? results[0] : null;
-      }
+          if (isCode && /^[a-zA-Z]{2,3}$/.test(input)) {
+            country = await this.service.getByAlphaCode(input);
+          } else {
+            const results = await this.service.getByName(input);
+            country = results.length > 0 ? results[0] : null;
+          }
 
-      if (!country || (Array.isArray(country) && country.length === 0)) {
-        return {
-          content: [
-            {
-              type: 'text',
-              text: `No country found for "${input}". Try a different name or alpha code (e.g. "pe" or "peru").`,
-            },
-          ],
-        };
-      }
+          if (!country || (Array.isArray(country) && country.length === 0)) {
+            return `No country found for "${input}". Try a different name or alpha code (e.g. "pe" or "peru").`;
+          }
 
-      const c = Array.isArray(country) ? country[0] : country;
-      const text = this.formatCountryAsText(c);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Country lookup failed: ${message}`);
+          const c = Array.isArray(country) ? country[0] : country;
+          return this.formatCountryAsText(c);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Country lookup failed for "${input}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSearchCountries(args: SearchCountriesInput): Promise<MCPToolCallResult> {
-    const { searchType, query } = args;
-    const q = query?.trim();
-    if (!q) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required');
-    }
+    const { searchType } = args;
     if (!['region', 'subregion', 'capital'].includes(searchType)) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -176,31 +198,44 @@ export class CountriesTools {
       );
     }
 
-    try {
-      let countries: Country[];
-      switch (searchType) {
-        case 'region':
-          countries = await this.service.getByRegion(q);
-          break;
-        case 'subregion':
-          countries = await this.service.getBySubregion(q);
-          break;
-        case 'capital':
-          countries = await this.service.getByCapital(q);
-          break;
-        default:
-          return createMCPErrorResult(
-            MCPErrorCode.INVALID_INPUT,
-            'searchType must be region, subregion, or capital'
-          );
-      }
-
-      const text = this.formatCountryListAsText(countries, `${searchType}: ${q}`);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Search failed: ${message}`);
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((v) => !v || typeof v !== 'string' || !v.trim())) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
+
+    const sections = await Promise.all(
+      items.map(async (raw) => {
+        const q = raw.trim();
+        try {
+          let countries: Country[];
+          switch (searchType) {
+            case 'region':
+              countries = await this.service.getByRegion(q);
+              break;
+            case 'subregion':
+              countries = await this.service.getBySubregion(q);
+              break;
+            case 'capital':
+              countries = await this.service.getByCapital(q);
+              break;
+            default:
+              return `searchType must be region, subregion, or capital`;
+          }
+          return this.formatCountryListAsText(countries, `${searchType}: ${q}`);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Search failed for "${q}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
+    }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeListAllCountries(args: ListAllCountriesInput): Promise<MCPToolCallResult> {

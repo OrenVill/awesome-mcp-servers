@@ -6,6 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **Batch (multi-request) inputs** — single-item tools across the servers now accept
+  either a single value or an array on their primary input, running sub-requests
+  concurrently and returning one result section per item (joined by `---`). Fully
+  backwards-compatible: passing a single value behaves exactly as before. Covered tools:
+  - search/lookup queries: `search_wikipedia`, `get_article`, `get_summary`,
+    `search_arxiv`, `get_paper`, `search_works`, `search_journals`, `get_work`,
+    `get_journal`, `search_books`, `get_book_by_isbn`, `get_author`, `search_repos`,
+    `get_repo`, `get_user`, `list_repo_issues`, `list_repo_releases`, `search_hn`,
+    `get_story`, `get_comments`, `search_mdn`, `get_doc`, `get_browser_compat`,
+    `get_country`, `search_countries`, `get_launch`, `get_rocket`, `get_event`
+  - word tools: `define_word`, `get_synonyms`, `get_phonetics`, `find_rhymes`,
+    `find_synonyms`, `means_like`, `sounds_like`, `suggest`
+  - geo: `geocode`, `reverse_geocode`, `search_locations`, `get_current_weather`,
+    `get_forecast` (lat/lon arrays zipped pairwise)
+  - currency: `convert_currency` (multiple target currencies), `get_historical_rates`
+    (multiple dates)
+  - Per-item failures are isolated as an error section rather than failing the whole batch.
+
 ### Fixed
 
 - **rest-countries-mcp** — restore functionality after the upstream

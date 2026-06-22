@@ -13,13 +13,13 @@ import {
 export const GEOCODE_DEF = {
   name: 'geocode',
   description:
-    "📍 I'm geocoding addresses\n\nForward geocode an address or place name to coordinates and structured address details via OpenStreetMap Nominatim. Returns up to N matches with lat/lon, display name, and address parts.",
+    "📍 I'm geocoding addresses\n\nForward geocode an address or place name to coordinates and structured address details via OpenStreetMap Nominatim. Returns up to N matches with lat/lon, display name, and address parts. Pass an array of queries to geocode several addresses at once in a single call.",
   keywords: ['nominatim', 'openstreetmap', 'geocode', 'address', 'search', 'location', 'coordinates'],
 };
 export const REVERSE_GEOCODE_DEF = {
   name: 'reverse_geocode',
   description:
-    "🗺️ I'm reverse-geocoding coordinates\n\nReverse geocode a latitude/longitude pair to a structured address via OpenStreetMap Nominatim. Returns the closest OSM object with display name and address parts.",
+    "🗺️ I'm reverse-geocoding coordinates\n\nReverse geocode a latitude/longitude pair to a structured address via OpenStreetMap Nominatim. Returns the closest OSM object with display name and address parts. Pass arrays of latitude/longitude (paired positionally) to reverse-geocode several points at once in a single call.",
   keywords: ['nominatim', 'openstreetmap', 'reverse', 'geocode', 'coordinates', 'address', 'latlon'],
 };
 export const LOOKUP_DEF = {
@@ -30,20 +30,59 @@ export const LOOKUP_DEF = {
 };
 
 export interface GeocodeInput {
-  query: string;
+  query: string | string[];
   limit?: number;
   country_codes?: string;
 }
 
 export interface ReverseGeocodeInput {
-  lat: number;
-  lon: number;
+  lat: number | number[];
+  lon: number | number[];
   zoom?: number;
 }
 
 export interface LookupInput {
   osm_ids: string;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
+function numberOrArraySchema(description: string, range: { minimum: number; maximum: number }): object {
+  return {
+    oneOf: [
+      { type: 'number', minimum: range.minimum, maximum: range.maximum },
+      {
+        type: 'array',
+        items: { type: 'number', minimum: range.minimum, maximum: range.maximum },
+        minItems: 1,
+      },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class NominatimTools {
   private service: NominatimService;
@@ -66,10 +105,9 @@ export class NominatimTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Address or place name to geocode (e.g. "1600 Pennsylvania Ave NW, Washington DC")',
-          },
+          query: stringOrArraySchema(
+            'Address or place name to geocode (e.g. "1600 Pennsylvania Ave NW, Washington DC").'
+          ),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -92,18 +130,14 @@ export class NominatimTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          lat: {
-            type: 'number',
-            description: 'Latitude in decimal degrees (-90 to 90)',
+          lat: numberOrArraySchema('Latitude in decimal degrees (-90 to 90).', {
             minimum: -90,
             maximum: 90,
-          },
-          lon: {
-            type: 'number',
-            description: 'Longitude in decimal degrees (-180 to 180)',
+          }),
+          lon: numberOrArraySchema('Longitude in decimal degrees (-180 to 180).', {
             minimum: -180,
             maximum: 180,
-          },
+          }),
           zoom: {
             type: 'number',
             description: 'Level of detail for the result (0=country, 18=building). Default 18.',
@@ -134,8 +168,12 @@ export class NominatimTools {
   }
 
   async executeGeocode(args: GeocodeInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
     if (args.limit != null && (typeof args.limit !== 'number' || args.limit < 1 || args.limit > 50)) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'limit must be a number between 1 and 50');
@@ -144,46 +182,112 @@ export class NominatimTools {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'country_codes must be a string');
     }
 
-    try {
-      const places = await this.service.geocode({
-        query: args.query,
-        limit: args.limit ?? 5,
-        countryCodes: args.country_codes,
-      });
-      const text = this.formatGeocodeResultsAsText(places, args.query);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim geocode failed: ${message}`);
+    // Single-value path: preserve the exact original behaviour, returning a
+    // hard MCP error result on failure rather than an embedded error section.
+    if (!isBatch) {
+      const query = items[0];
+      try {
+        const places = await this.service.geocode({
+          query,
+          limit: args.limit ?? 5,
+          countryCodes: args.country_codes,
+        });
+        const text = this.formatGeocodeResultsAsText(places, query);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim geocode failed: ${message}`);
+      }
     }
+
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const places = await this.service.geocode({
+            query,
+            limit: args.limit ?? 5,
+            countryCodes: args.country_codes,
+          });
+          return this.formatGeocodeResultsAsText(places, query);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Nominatim geocode failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeReverseGeocode(args: ReverseGeocodeInput): Promise<MCPToolCallResult> {
-    if (typeof args.lat !== 'number' || Number.isNaN(args.lat) || args.lat < -90 || args.lat > 90) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat is required and must be a number between -90 and 90');
+    const lat = normalizeToArray(args.lat);
+    const lon = normalizeToArray(args.lon);
+    const isBatch = lat.isBatch || lon.isBatch;
+
+    if (lat.items.length !== lon.items.length) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        `lat and lon must have the same number of values when batching (got ${lat.items.length} lat and ${lon.items.length} lon)`
+      );
     }
-    if (typeof args.lon !== 'number' || Number.isNaN(args.lon) || args.lon < -180 || args.lon > 180) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lon is required and must be a number between -180 and 180');
+
+    const pairs = lat.items.map((latVal, i) => ({ lat: latVal, lon: lon.items[i] }));
+    if (pairs.length === 0) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat and lon are required');
+    }
+    for (const { lat: latVal, lon: lonVal } of pairs) {
+      if (typeof latVal !== 'number' || Number.isNaN(latVal) || latVal < -90 || latVal > 90) {
+        return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat is required and must be a number between -90 and 90');
+      }
+      if (typeof lonVal !== 'number' || Number.isNaN(lonVal) || lonVal < -180 || lonVal > 180) {
+        return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lon is required and must be a number between -180 and 180');
+      }
     }
     if (args.zoom != null && (typeof args.zoom !== 'number' || args.zoom < 0 || args.zoom > 18)) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'zoom must be a number between 0 and 18');
     }
 
-    try {
-      const place = await this.service.reverseGeocode({
-        lat: args.lat,
-        lon: args.lon,
-        zoom: args.zoom ?? 18,
-      });
-      if (place.error) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim reverse geocode: ${place.error}`);
+    // Single-value path: preserve the exact original behaviour, returning a
+    // hard MCP error result on failure rather than an embedded error section.
+    if (!isBatch) {
+      const { lat: latVal, lon: lonVal } = pairs[0];
+      try {
+        const place = await this.service.reverseGeocode({
+          lat: latVal,
+          lon: lonVal,
+          zoom: args.zoom ?? 18,
+        });
+        if (place.error) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim reverse geocode: ${place.error}`);
+        }
+        const text = this.formatReverseAsText(place, latVal, lonVal);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim reverse geocode failed: ${message}`);
       }
-      const text = this.formatReverseAsText(place, args.lat, args.lon);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim reverse geocode failed: ${message}`);
     }
+
+    const sections = await Promise.all(
+      pairs.map(async ({ lat: latVal, lon: lonVal }) => {
+        try {
+          const place = await this.service.reverseGeocode({
+            lat: latVal,
+            lon: lonVal,
+            zoom: args.zoom ?? 18,
+          });
+          if (place.error) {
+            return `Reverse geocode for ${latVal}, ${lonVal}:\n\nNominatim reverse geocode: ${place.error}`;
+          }
+          return this.formatReverseAsText(place, latVal, lonVal);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Reverse geocode for ${latVal}, ${lonVal}:\n\nNominatim reverse geocode failed: ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeLookup(args: LookupInput): Promise<MCPToolCallResult> {

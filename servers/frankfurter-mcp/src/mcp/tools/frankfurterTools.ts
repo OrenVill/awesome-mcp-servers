@@ -21,14 +21,14 @@ export const GET_LATEST_RATES_DEF = {
 export const CONVERT_CURRENCY_DEF = {
   name: 'convert_currency',
   description:
-    "💵 I'm converting currency\n\nConvert an amount from one currency to another using the latest ECB rate. Requires `amount`, `from`, and `to` ISO codes.",
+    "💵 I'm converting currency\n\nConvert an amount from one currency to another using the latest ECB rate. Requires `amount`, `from`, and `to` ISO codes. Pass an array of target currencies to convert to several at once in a single call.",
   keywords: ['frankfurter', 'forex', 'fx', 'currency', 'convert', 'exchange'],
 };
 
 export const GET_HISTORICAL_RATES_DEF = {
   name: 'get_historical_rates',
   description:
-    "🗓️ I'm looking up historical FX rates\n\nGet ECB rates for a specific date (YYYY-MM-DD). Optional base currency (default EUR) and comma-separated target symbols.",
+    "🗓️ I'm looking up historical FX rates\n\nGet ECB rates for a specific date (YYYY-MM-DD). Optional base currency (default EUR) and comma-separated target symbols. Pass an array of dates to fetch several at once in a single call.",
   keywords: ['frankfurter', 'forex', 'fx', 'currency', 'historical', 'rates', 'date'],
 };
 
@@ -54,11 +54,11 @@ export interface GetLatestRatesInput {
 export interface ConvertCurrencyInput {
   amount: number;
   from: string;
-  to: string;
+  to: string | string[];
 }
 
 export interface GetHistoricalRatesInput {
-  date: string;
+  date: string | string[];
   base?: string;
   symbols?: string;
 }
@@ -73,6 +73,30 @@ export interface GetTimeSeriesInput {
 export type ListCurrenciesInput = Record<string, never>;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class FrankfurterTools {
   private service: FrankfurterService;
@@ -126,10 +150,7 @@ export class FrankfurterTools {
             type: 'string',
             description: 'Source currency ISO code, e.g. "USD".',
           },
-          to: {
-            type: 'string',
-            description: 'Target currency ISO code, e.g. "EUR".',
-          },
+          to: stringOrArraySchema('Target currency ISO code, e.g. "EUR".'),
         },
         required: ['amount', 'from', 'to'],
       },
@@ -143,11 +164,7 @@ export class FrankfurterTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          date: {
-            type: 'string',
-            description: 'Date in YYYY-MM-DD format (e.g. "2020-01-15").',
-            pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-          },
+          date: stringOrArraySchema('Date in YYYY-MM-DD format (e.g. "2020-01-15").'),
           base: {
             type: 'string',
             description: 'Base currency ISO code (default "EUR").',
@@ -232,43 +249,76 @@ export class FrankfurterTools {
     if (!args.from || typeof args.from !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'from is required and must be a string ISO code');
     }
-    if (!args.to || typeof args.to !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'to is required and must be a string ISO code');
-    }
 
-    const from = args.from.toUpperCase();
-    const to = args.to.toUpperCase();
-
-    if (from === to) {
+    const { items, isBatch } = normalizeToArray(args.to);
+    if (items.length === 0 || items.some((t) => !t || typeof t !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
-        '"from" and "to" must be different currency codes'
+        'to is required and must be a string ISO code or a non-empty array of ISO codes'
       );
     }
 
-    try {
-      const response = await this.service.convert({ amount: args.amount, from, to });
-      const converted = response.rates?.[to];
-      if (typeof converted !== 'number') {
+    const from = args.from.toUpperCase();
+    const amount = args.amount;
+
+    const convertOne = async (rawTo: string): Promise<string> => {
+      const to = rawTo.toUpperCase();
+      if (from === to) {
+        return `"from" and "to" must be different currency codes (got ${to})`;
+      }
+      try {
+        const response = await this.service.convert({ amount, from, to });
+        const converted = response.rates?.[to];
+        if (typeof converted !== 'number') {
+          return `Frankfurter did not return a rate for ${to}`;
+        }
+        const rate = converted / amount;
+        return `${this.formatNumber(amount)} ${from} = ${this.formatNumber(converted)} ${to} (rate: ${this.formatNumber(rate, 6)}) on ${response.date}`;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return `Conversion to ${to} failed: ${message}`;
+      }
+    };
+
+    if (!isBatch) {
+      const to = items[0]!.toUpperCase();
+      if (from === to) {
         return createMCPErrorResult(
-          MCPErrorCode.API_ERROR,
-          `Frankfurter did not return a rate for ${to}`
+          MCPErrorCode.INVALID_INPUT,
+          '"from" and "to" must be different currency codes'
         );
       }
-      const rate = converted / args.amount;
-      const text = `${this.formatNumber(args.amount)} ${from} = ${this.formatNumber(converted)} ${to} (rate: ${this.formatNumber(rate, 6)}) on ${response.date}`;
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Conversion failed: ${message}`);
+      try {
+        const response = await this.service.convert({ amount, from, to });
+        const converted = response.rates?.[to];
+        if (typeof converted !== 'number') {
+          return createMCPErrorResult(
+            MCPErrorCode.API_ERROR,
+            `Frankfurter did not return a rate for ${to}`
+          );
+        }
+        const rate = converted / amount;
+        const text = `${this.formatNumber(amount)} ${from} = ${this.formatNumber(converted)} ${to} (rate: ${this.formatNumber(rate, 6)}) on ${response.date}`;
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Conversion failed: ${message}`);
+      }
     }
+
+    const sections = await Promise.all(items.map((t) => convertOne(t)));
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetHistoricalRates(args: GetHistoricalRatesInput): Promise<MCPToolCallResult> {
-    if (!args.date || typeof args.date !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'date is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.date);
+    if (items.length === 0 || items.some((d) => !d || typeof d !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'date is required and must be a string or a non-empty array of strings'
+      );
     }
-    if (!ISO_DATE_RE.test(args.date)) {
+    if (items.some((d) => !ISO_DATE_RE.test(d))) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'date must be in YYYY-MM-DD format');
     }
     if (args.base !== undefined && typeof args.base !== 'string') {
@@ -278,18 +328,36 @@ export class FrankfurterTools {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'symbols must be a comma-separated string');
     }
 
-    try {
-      const response = await this.service.getHistoricalRates({
-        date: args.date,
-        base: args.base?.toUpperCase(),
-        symbols: args.symbols?.toUpperCase(),
-      });
-      const text = this.formatLatestRatesAsText(response, { historical: true, requestedDate: args.date });
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get historical rates: ${message}`);
+    const base = args.base?.toUpperCase();
+    const symbols = args.symbols?.toUpperCase();
+
+    const fetchOne = async (date: string): Promise<string> => {
+      try {
+        const response = await this.service.getHistoricalRates({ date, base, symbols });
+        return this.formatLatestRatesAsText(response, { historical: true, requestedDate: date });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return `Failed to get historical rates for ${date}: ${message}`;
+      }
+    };
+
+    if (!isBatch) {
+      try {
+        const response = await this.service.getHistoricalRates({
+          date: items[0]!,
+          base,
+          symbols,
+        });
+        const text = this.formatLatestRatesAsText(response, { historical: true, requestedDate: items[0]! });
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get historical rates: ${message}`);
+      }
     }
+
+    const sections = await Promise.all(items.map((d) => fetchOne(d)));
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetTimeSeries(args: GetTimeSeriesInput): Promise<MCPToolCallResult> {

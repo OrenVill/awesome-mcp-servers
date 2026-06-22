@@ -34,20 +34,20 @@ const DEFAULT_DAILY = [
 export const GET_CURRENT_WEATHER_DEF = {
   name: 'get_current_weather',
   description:
-    "🌤️ I'm fetching current weather\n\nGet current weather for a location. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`.",
+    "🌤️ I'm fetching current weather\n\nGet current weather for a location. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`. Pass arrays of latitude/longitude (paired positionally) to fetch several locations at once in a single call.",
   keywords: ['weather', 'temperature', 'forecast', 'current', 'city'],
 };
 export const GET_FORECAST_DEF = {
   name: 'get_forecast',
   description:
-    "📅 I'm loading weather forecasts\n\nGet weather forecast for the next 1-16 days. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`.",
+    "📅 I'm loading weather forecasts\n\nGet weather forecast for the next 1-16 days. Provide either a `city` name (auto-geocoded via Open-Meteo) OR explicit `latitude` + `longitude`. Pass arrays of latitude/longitude (paired positionally) to fetch several locations at once in a single call.",
   keywords: ['weather', 'forecast', 'temperature', 'precipitation', 'city'],
 };
 
 export interface GetCurrentWeatherInput {
   city?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | number[];
+  longitude?: number | number[];
   timezone?: string;
   temperature_unit?: 'celsius' | 'fahrenheit' | string;
   wind_speed_unit?: 'kmh' | 'ms' | 'mph' | 'kn' | string;
@@ -56,14 +56,45 @@ export interface GetCurrentWeatherInput {
 
 export interface GetForecastInput {
   city?: string;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | number[];
+  longitude?: number | number[];
   forecast_days?: number;
   timezone?: string;
   temperature_unit?: 'celsius' | 'fahrenheit' | string;
   wind_speed_unit?: 'kmh' | 'ms' | 'mph' | 'kn' | string;
   include_html_card?: boolean;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
+function numberOrArraySchema(
+  description: string,
+  range: { minimum: number; maximum: number }
+): object {
+  return {
+    oneOf: [
+      { type: 'number', minimum: range.minimum, maximum: range.maximum },
+      {
+        type: 'array',
+        items: { type: 'number', minimum: range.minimum, maximum: range.maximum },
+        minItems: 1,
+      },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class WeatherTools {
   private service: OpenMeteoService;
@@ -91,18 +122,14 @@ export class WeatherTools {
             description:
               'City name (e.g. "Berlin", "New York", "Tokyo"). When provided, coordinates are resolved automatically via Open-Meteo geocoding. Use this OR latitude+longitude.',
           },
-          latitude: {
-            type: 'number',
-            description: 'Latitude (WGS84). Required if `city` is not provided.',
-            minimum: -90,
-            maximum: 90,
-          },
-          longitude: {
-            type: 'number',
-            description: 'Longitude (WGS84). Required if `city` is not provided.',
-            minimum: -180,
-            maximum: 180,
-          },
+          latitude: numberOrArraySchema(
+            'Latitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `longitude` (equal length).',
+            { minimum: -90, maximum: 90 }
+          ),
+          longitude: numberOrArraySchema(
+            'Longitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `latitude` (equal length).',
+            { minimum: -180, maximum: 180 }
+          ),
           timezone: {
             type: 'string',
             description: 'Timezone (e.g. Europe/Berlin, America/New_York) or "auto"',
@@ -141,18 +168,14 @@ export class WeatherTools {
             description:
               'City name (e.g. "Berlin", "New York", "Tokyo"). When provided, coordinates are resolved automatically via Open-Meteo geocoding. Use this OR latitude+longitude.',
           },
-          latitude: {
-            type: 'number',
-            description: 'Latitude (WGS84). Required if `city` is not provided.',
-            minimum: -90,
-            maximum: 90,
-          },
-          longitude: {
-            type: 'number',
-            description: 'Longitude (WGS84). Required if `city` is not provided.',
-            minimum: -180,
-            maximum: 180,
-          },
+          latitude: numberOrArraySchema(
+            'Latitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `longitude` (equal length).',
+            { minimum: -90, maximum: 90 }
+          ),
+          longitude: numberOrArraySchema(
+            'Longitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `latitude` (equal length).',
+            { minimum: -180, maximum: 180 }
+          ),
           forecast_days: {
             type: 'number',
             description: 'Number of forecast days (1-16)',
@@ -189,95 +212,172 @@ export class WeatherTools {
   }
 
   async executeGetCurrentWeather(args: GetCurrentWeatherInput): Promise<MCPToolCallResult> {
-    const resolved = await this.resolveLocation(args);
+    const resolved = await this.resolveLocations(args);
     if ('error' in resolved) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, resolved.error);
     }
-    const { lat, lon, label } = resolved;
+    const { locations, isBatch } = resolved;
 
-    try {
-      const response = await this.service.getForecast({
-        latitude: lat,
-        longitude: lon,
-        current: DEFAULT_CURRENT,
-        timezone: args.timezone ?? 'auto',
-        temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
-        wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
-        forecast_days: 1,
-      });
-
-      if (response.error && response.reason) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, response.reason);
-      }
-
-      const data = response as unknown as Record<string, unknown>;
-      const text = this.formatCurrentWeatherAsText(data, label);
-      const content: MCPContentItem[] = [{ type: 'text', text }];
-      if (args.include_html_card === true) {
-        content.push({
-          type: 'resource',
-          resource: {
-            uri: 'weather://current-card',
-            text: this.formatCurrentWeatherAsHtml(data, label),
-            mimeType: 'text/html',
-          },
+    // Single-value path: behave EXACTLY as before (text + optional HTML card,
+    // API errors surfaced as error results).
+    if (!isBatch) {
+      const { lat, lon, label } = locations[0];
+      try {
+        const response = await this.service.getForecast({
+          latitude: lat,
+          longitude: lon,
+          current: DEFAULT_CURRENT,
+          timezone: args.timezone ?? 'auto',
+          temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
+          wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
+          forecast_days: 1,
         });
+
+        if (response.error && response.reason) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, response.reason);
+        }
+
+        const data = response as unknown as Record<string, unknown>;
+        const text = this.formatCurrentWeatherAsText(data, label);
+        const content: MCPContentItem[] = [{ type: 'text', text }];
+        if (args.include_html_card === true) {
+          content.push({
+            type: 'resource',
+            resource: {
+              uri: 'weather://current-card',
+              text: this.formatCurrentWeatherAsHtml(data, label),
+              mimeType: 'text/html',
+            },
+          });
+        }
+        return { content };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Weather fetch failed: ${message}`);
       }
-      return { content };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Weather fetch failed: ${message}`);
     }
+
+    // Batch path: run concurrently, one text section per coordinate pair,
+    // per-item errors do not fail the whole batch.
+    const sections = await Promise.all(
+      locations.map(async ({ lat, lon, label }) => {
+        try {
+          const response = await this.service.getForecast({
+            latitude: lat,
+            longitude: lon,
+            current: DEFAULT_CURRENT,
+            timezone: args.timezone ?? 'auto',
+            temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
+            wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
+            forecast_days: 1,
+          });
+          if (response.error && response.reason) {
+            return `# Current Weather (${lat}, ${lon})\n\nWeather fetch failed: ${response.reason}`;
+          }
+          const data = response as unknown as Record<string, unknown>;
+          return this.formatCurrentWeatherAsText(data, label);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Current Weather (${lat}, ${lon})\n\nWeather fetch failed: ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetForecast(args: GetForecastInput): Promise<MCPToolCallResult> {
-    const resolved = await this.resolveLocation(args);
+    const resolved = await this.resolveLocations(args);
     if ('error' in resolved) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, resolved.error);
     }
-    const { lat, lon, label } = resolved;
+    const { locations, isBatch } = resolved;
 
-    try {
-      const response = await this.service.getForecast({
-        latitude: lat,
-        longitude: lon,
-        current: DEFAULT_CURRENT,
-        daily: DEFAULT_DAILY,
-        timezone: args.timezone ?? 'auto',
-        temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
-        wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
-        forecast_days: args.forecast_days ?? 7,
-      });
-
-      if (response.error && response.reason) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, response.reason);
-      }
-
-      const data = response as unknown as Record<string, unknown>;
-      const text = this.formatForecastAsText(data, label);
-      const content: MCPContentItem[] = [{ type: 'text', text }];
-      if (args.include_html_card === true) {
-        content.push({
-          type: 'resource',
-          resource: {
-            uri: 'weather://forecast-card',
-            text: this.formatForecastAsHtml(data, label),
-            mimeType: 'text/html',
-          },
+    // Single-value path: behave EXACTLY as before.
+    if (!isBatch) {
+      const { lat, lon, label } = locations[0];
+      try {
+        const response = await this.service.getForecast({
+          latitude: lat,
+          longitude: lon,
+          current: DEFAULT_CURRENT,
+          daily: DEFAULT_DAILY,
+          timezone: args.timezone ?? 'auto',
+          temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
+          wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
+          forecast_days: args.forecast_days ?? 7,
         });
+
+        if (response.error && response.reason) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, response.reason);
+        }
+
+        const data = response as unknown as Record<string, unknown>;
+        const text = this.formatForecastAsText(data, label);
+        const content: MCPContentItem[] = [{ type: 'text', text }];
+        if (args.include_html_card === true) {
+          content.push({
+            type: 'resource',
+            resource: {
+              uri: 'weather://forecast-card',
+              text: this.formatForecastAsHtml(data, label),
+              mimeType: 'text/html',
+            },
+          });
+        }
+        return { content };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Forecast fetch failed: ${message}`);
       }
-      return { content };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Forecast fetch failed: ${message}`);
     }
+
+    // Batch path: run concurrently, one text section per coordinate pair.
+    const sections = await Promise.all(
+      locations.map(async ({ lat, lon, label }) => {
+        try {
+          const response = await this.service.getForecast({
+            latitude: lat,
+            longitude: lon,
+            current: DEFAULT_CURRENT,
+            daily: DEFAULT_DAILY,
+            timezone: args.timezone ?? 'auto',
+            temperature_unit: (args.temperature_unit ?? 'celsius') as 'celsius' | 'fahrenheit',
+            wind_speed_unit: (args.wind_speed_unit ?? 'kmh') as 'kmh' | 'ms' | 'mph' | 'kn',
+            forecast_days: args.forecast_days ?? 7,
+          });
+          if (response.error && response.reason) {
+            return `# Weather Forecast (${lat}, ${lon})\n\nForecast fetch failed: ${response.reason}`;
+          }
+          const data = response as unknown as Record<string, unknown>;
+          return this.formatForecastAsText(data, label);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Weather Forecast (${lat}, ${lon})\n\nForecast fetch failed: ${message}`;
+        }
+      })
+    );
+
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
-  private async resolveLocation(args: {
+  /**
+   * Resolve the request into one or more coordinate pairs.
+   *
+   * - `city`: single geocoded location (never a batch).
+   * - scalar `latitude` + `longitude`: single pair (never a batch) — unchanged.
+   * - array `latitude` + array `longitude`: zipped pairwise (must be equal
+   *   length) — a batch.
+   * Mixing a scalar with an array, or arrays of unequal length, is an error.
+   */
+  private async resolveLocations(args: {
     city?: string;
-    latitude?: number;
-    longitude?: number;
-  }): Promise<{ lat: number; lon: number; label?: string } | { error: string }> {
+    latitude?: number | number[];
+    longitude?: number | number[];
+  }): Promise<
+    | { locations: Array<{ lat: number; lon: number; label?: string }>; isBatch: boolean }
+    | { error: string }
+  > {
     const city = args.city?.trim();
     if (city) {
       try {
@@ -287,21 +387,53 @@ export class WeatherTools {
           return { error: `Could not find coordinates for city: "${city}". Try passing explicit latitude and longitude.` };
         }
         const label = [top.name, top.admin1, top.country].filter(Boolean).join(', ');
-        return { lat: top.latitude, lon: top.longitude, label };
+        return { locations: [{ lat: top.latitude, lon: top.longitude, label }], isBatch: false };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         return { error: `Geocoding failed for "${city}": ${message}. You can still call this tool with explicit latitude and longitude.` };
       }
     }
+
     const lat = args.latitude;
     const lon = args.longitude;
+    const latIsArray = Array.isArray(lat);
+    const lonIsArray = Array.isArray(lon);
+
+    if (latIsArray !== lonIsArray) {
+      return { error: '`latitude` and `longitude` must both be single values or both be arrays' };
+    }
+
+    if (latIsArray && lonIsArray) {
+      const lats = lat as number[];
+      const lons = lon as number[];
+      if (lats.length === 0 || lons.length === 0) {
+        return { error: '`latitude` and `longitude` arrays must not be empty' };
+      }
+      if (lats.length !== lons.length) {
+        return { error: `\`latitude\` and \`longitude\` arrays must have equal length (got ${lats.length} and ${lons.length})` };
+      }
+      const locations: Array<{ lat: number; lon: number }> = [];
+      for (let i = 0; i < lats.length; i++) {
+        const la = lats[i];
+        const lo = lons[i];
+        if (typeof la !== 'number' || typeof lo !== 'number') {
+          return { error: '`latitude` and `longitude` arrays must contain only numbers' };
+        }
+        if (la < -90 || la > 90 || lo < -180 || lo > 180) {
+          return { error: `Invalid coordinates at index ${i}: ${la}, ${lo}` };
+        }
+        locations.push({ lat: la, lon: lo });
+      }
+      return { locations, isBatch: true };
+    }
+
     if (typeof lat !== 'number' || typeof lon !== 'number') {
       return { error: 'Provide either `city` or both `latitude` and `longitude`' };
     }
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
       return { error: 'Invalid coordinates' };
     }
-    return { lat, lon };
+    return { locations: [{ lat, lon }], isBatch: false };
   }
 
   private formatCurrentWeatherAsText(response: Record<string, unknown>, label?: string): string {

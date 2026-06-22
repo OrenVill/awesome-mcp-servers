@@ -19,19 +19,19 @@ export const GET_TOP_STORIES_DEF = {
 export const GET_STORY_DEF = {
   name: 'get_story',
   description:
-    "📰 I'm fetching one HN story\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text.",
+    "📰 I'm fetching one HN story\n\nGet a single story or item by ID. Returns title, URL, score, author, kids count, and optional text. Pass an array of IDs to fetch several stories at once in a single call.",
   keywords: ['hacker news', 'hn', 'story', 'item'],
 };
 export const GET_COMMENTS_DEF = {
   name: 'get_comments',
   description:
-    "💬 I'm loading comment threads\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit.",
+    "💬 I'm loading comment threads\n\nGet the comment tree for a story. Returns the story and nested comments with configurable depth and limit. Pass an array of story IDs to fetch several at once in a single call.",
   keywords: ['hacker news', 'hn', 'comments', 'discussion'],
 };
 export const SEARCH_HN_DEF = {
   name: 'search_hn',
   description:
-    "🔍 I'm searching Hacker News\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count.",
+    "🔍 I'm searching Hacker News\n\nSearch Hacker News via Algolia API. Returns matching stories with title, URL, author, points, and comment count. Pass an array to run several searches at once in a single call.",
   keywords: ['hacker news', 'hn', 'search'],
 };
 
@@ -41,20 +41,55 @@ export interface GetTopStoriesInput {
 }
 
 export interface GetStoryInput {
-  id: number;
+  id: number | number[];
 }
 
 export interface GetCommentsInput {
-  storyId: number;
+  storyId: number | number[];
   maxDepth?: number;
   maxComments?: number;
 }
 
 export interface SearchHNInput {
-  query: string;
+  query: string | string[];
   hitsPerPage?: number;
   page?: number;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
+function numberOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'number' },
+      { type: 'array', items: { type: 'number' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class HackerNewsTools {
   private service: HackerNewsService;
@@ -105,10 +140,7 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'number',
-            description: 'Hacker News item ID (story, comment, job, etc.)',
-          },
+          id: numberOrArraySchema('Hacker News item ID (story, comment, job, etc.).'),
         },
         required: ['id'],
       },
@@ -122,10 +154,7 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          storyId: {
-            type: 'number',
-            description: 'Story ID to fetch comments for',
-          },
+          storyId: numberOrArraySchema('Story ID to fetch comments for.'),
           maxDepth: {
             type: 'number',
             description: 'Maximum nesting depth for comment tree (default 3)',
@@ -153,10 +182,7 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Search query for Hacker News',
-          },
+          query: stringOrArraySchema('Search query for Hacker News.'),
           hitsPerPage: {
             type: 'number',
             description: 'Number of results per page (1-100)',
@@ -201,48 +227,60 @@ export class HackerNewsTools {
   }
 
   async executeGetStory(args: GetStoryInput): Promise<MCPToolCallResult> {
-    const id = args.id;
-    if (typeof id !== 'number' || id < 0) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id must be a non-negative number');
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((id) => typeof id !== 'number' || id < 0)) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'id must be a non-negative number or a non-empty array of non-negative numbers'
+      );
     }
 
-    try {
-      const item = await this.service.getItem(id);
-      if (!item) {
-        return { content: [{ type: 'text', text: `Item ${id} not found.` }] };
-      }
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const item = await this.service.getItem(id);
+          if (!item) {
+            return `Item ${id} not found.`;
+          }
+          return this.formatItemAsText(item);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Item ${id}\n\nFetch failed: ${message}`;
+        }
+      })
+    );
 
-      const text = this.formatItemAsText(item);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Fetch failed: ${message}`);
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetComments(args: GetCommentsInput): Promise<MCPToolCallResult> {
-    const storyId = args.storyId;
+    const { items, isBatch } = normalizeToArray(args.storyId);
     const maxDepth = Math.min(Math.max(args.maxDepth ?? 3, 1), 10);
     const maxComments = Math.min(Math.max(args.maxComments ?? 50, 1), 200);
 
-    if (typeof storyId !== 'number' || storyId < 0) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'storyId must be a non-negative number');
+    if (items.length === 0 || items.some((sid) => typeof sid !== 'number' || sid < 0)) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'storyId must be a non-negative number or a non-empty array of non-negative numbers'
+      );
     }
 
-    try {
+    const fetchComments = async (storyId: number): Promise<string> => {
       const story = await this.service.getItem(storyId);
       if (!story) {
-        return { content: [{ type: 'text', text: `Story ${storyId} not found.` }] };
+        return `Story ${storyId} not found.`;
       }
 
       if (story.type !== 'story' && story.type !== 'job' && story.type !== 'poll') {
-        return { content: [{ type: 'text', text: `Item ${storyId} is not a story (type: ${story.type ?? 'unknown'}).` }] };
+        return `Item ${storyId} is not a story (type: ${story.type ?? 'unknown'}).`;
       }
 
       const kids = story.kids ?? [];
       if (kids.length === 0) {
-        const text = this.formatItemAsText(story) + '\n\nNo comments yet.';
-        return { content: [{ type: 'text', text }] };
+        return this.formatItemAsText(story) + '\n\nNo comments yet.';
       }
 
       const comments: HNItem[] = [];
@@ -262,32 +300,55 @@ export class HackerNewsTools {
 
       await fetchKids(kids, 1);
 
-      const text = this.formatItemAsText(story) + '\n\n' + this.formatCommentTree(story, comments, kids);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Fetch failed: ${message}`);
+      return this.formatItemAsText(story) + '\n\n' + this.formatCommentTree(story, comments, kids);
+    };
+
+    const sections = await Promise.all(
+      items.map(async (storyId) => {
+        try {
+          return await fetchComments(storyId);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Story ${storyId}\n\nFetch failed: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeSearchHN(args: SearchHNInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const response = await this.service.search({
-        query: args.query,
-        hitsPerPage: args.hitsPerPage ?? 20,
-        page: args.page ?? 0,
-      });
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const response = await this.service.search({
+            query,
+            hitsPerPage: args.hitsPerPage ?? 20,
+            page: args.page ?? 0,
+          });
+          return this.formatSearchResultsAsText(response);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Hacker News search: "${query}"\n\nSearch failed: ${message}`;
+        }
+      })
+    );
 
-      const text = this.formatSearchResultsAsText(response);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Search failed: ${message}`);
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private formatStoriesAsText(items: HNItem[], listType: string): string {

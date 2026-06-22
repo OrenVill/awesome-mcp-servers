@@ -34,14 +34,14 @@ export const LIST_LAUNCHES_DEF = {
 export const GET_LAUNCH_DEF = {
   name: 'get_launch',
   description:
-    "🚀 I'm fetching a single SpaceX launch by id\n\nReturns full details of a specific SpaceX launch given its id.",
+    "🚀 I'm fetching a single SpaceX launch by id\n\nReturns full details of a specific SpaceX launch given its id. Pass an array of IDs to fetch several launches at once in a single call.",
   keywords: ['spacex', 'launch', 'detail', 'rocket', 'space'],
 };
 
 export const GET_ROCKET_DEF = {
   name: 'get_rocket',
   description:
-    "🚀 I'm fetching a SpaceX rocket by id\n\nReturns details about a SpaceX rocket including specs, success rate, first flight, and description.",
+    "🚀 I'm fetching a SpaceX rocket by id\n\nReturns details about a SpaceX rocket including specs, success rate, first flight, and description. Pass an array of IDs to fetch several rockets at once in a single call.",
   keywords: ['spacex', 'rocket', 'specs', 'falcon', 'starship', 'space'],
 };
 
@@ -63,12 +63,36 @@ export interface ListLaunchesInput {
 }
 
 export interface GetLaunchInput {
-  id: string;
+  id: string | string[];
 }
 
 export interface GetRocketInput {
-  id: string;
+  id: string | string[];
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class SpacexTools {
   private service: SpaceXService;
@@ -139,10 +163,7 @@ export class SpacexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'string',
-            description: 'SpaceX launch id (e.g. "5eb87cd9ffd86e000604b32a")',
-          },
+          id: stringOrArraySchema('SpaceX launch id (e.g. "5eb87cd9ffd86e000604b32a").'),
         },
         required: ['id'],
       },
@@ -154,10 +175,7 @@ export class SpacexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'string',
-            description: 'SpaceX rocket id (e.g. "5e9d0d95eda69973a809d1ec")',
-          },
+          id: stringOrArraySchema('SpaceX rocket id (e.g. "5e9d0d95eda69973a809d1ec").'),
         },
         required: ['id'],
       },
@@ -215,31 +233,57 @@ export class SpacexTools {
   }
 
   async executeGetLaunch(args: GetLaunchInput): Promise<MCPToolCallResult> {
-    if (!args.id || typeof args.id !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'id is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const launch = await this.service.getLaunch(args.id);
-      return { content: [{ type: 'text', text: this.formatLaunch(launch, 'Launch') }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to fetch launch: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const launch = await this.service.getLaunch(id);
+          return this.formatLaunch(launch, 'Launch');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Launch: ${id}\n\nFailed to fetch launch: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetRocket(args: GetRocketInput): Promise<MCPToolCallResult> {
-    if (!args.id || typeof args.id !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'id is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const rocket = await this.service.getRocket(args.id);
-      return { content: [{ type: 'text', text: this.formatRocket(rocket) }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to fetch rocket: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const rocket = await this.service.getRocket(id);
+          return this.formatRocket(rocket);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Rocket: ${id}\n\nFailed to fetch rocket: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private formatLaunch(launch: SpaceXLaunch, heading: string): string {

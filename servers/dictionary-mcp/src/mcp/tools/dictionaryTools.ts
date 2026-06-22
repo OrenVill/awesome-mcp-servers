@@ -14,36 +14,60 @@ import {
 export const DEFINE_WORD_DEF = {
   name: 'define_word',
   description:
-    "📚 I'm looking up word definitions\n\nGet the full dictionary entry for a word: phonetic, parts of speech, definitions, and example usages. Defaults to English.",
+    "📚 I'm looking up word definitions\n\nGet the full dictionary entry for a word: phonetic, parts of speech, definitions, and example usages. Defaults to English. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'definition', 'define', 'meaning', 'word', 'vocabulary'],
 };
 export const GET_SYNONYMS_DEF = {
   name: 'get_synonyms',
   description:
-    "🔁 I'm finding synonyms\n\nReturn synonyms for a word, grouped by part of speech, sourced from the dictionary entry.",
+    "🔁 I'm finding synonyms\n\nReturn synonyms for a word, grouped by part of speech, sourced from the dictionary entry. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'synonyms', 'thesaurus', 'similar', 'word', 'vocabulary'],
 };
 export const GET_PHONETICS_DEF = {
   name: 'get_phonetics',
   description:
-    "🔊 I'm fetching phonetics\n\nReturn IPA phonetic spellings and audio pronunciation URLs for a word.",
+    "🔊 I'm fetching phonetics\n\nReturn IPA phonetic spellings and audio pronunciation URLs for a word. Pass an array of words to look up several at once in a single call.",
   keywords: ['dictionary', 'phonetics', 'pronunciation', 'ipa', 'audio', 'word'],
 };
 
 export interface DefineWordInput {
-  word: string;
+  word: string | string[];
   lang?: string;
 }
 
 export interface GetSynonymsInput {
-  word: string;
+  word: string | string[];
   lang?: string;
 }
 
 export interface GetPhoneticsInput {
-  word: string;
+  word: string | string[];
   lang?: string;
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class DictionaryTools {
   private service: DictionaryService;
@@ -65,10 +89,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'The word to look up (e.g. "serendipity")',
-          },
+          word: stringOrArraySchema('The word to look up (e.g. "serendipity").'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en"). Examples: en, en_US, es, fr, de, hi, ja, ru.',
@@ -85,10 +106,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'The word to find synonyms for',
-          },
+          word: stringOrArraySchema('The word to find synonyms for.'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en")',
@@ -105,10 +123,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: {
-            type: 'string',
-            description: 'The word to get phonetics and audio for',
-          },
+          word: stringOrArraySchema('The word to get phonetics and audio for.'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en")',
@@ -121,60 +136,96 @@ export class DictionaryTools {
   }
 
   async executeDefineWord(args: DefineWordInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const lang = args.lang ?? 'en';
 
-    try {
-      const entries = await this.service.define(args.word, lang);
-      const text = this.formatEntriesAsText(args.word, entries);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      if (err instanceof DictionaryNotFoundError) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Word not found: "${args.word}" (${lang})`);
-      }
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Dictionary lookup failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const entries = await this.service.define(word, lang);
+          return this.formatEntriesAsText(word, entries);
+        } catch (err) {
+          if (err instanceof DictionaryNotFoundError) {
+            return `# ${word}\n\nWord not found (${lang}).`;
+          }
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ${word}\n\nDictionary lookup failed: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetSynonyms(args: GetSynonymsInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const lang = args.lang ?? 'en';
 
-    try {
-      const groups = await this.service.synonyms(args.word, lang);
-      const text = this.formatSynonymsAsText(args.word, groups);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      if (err instanceof DictionaryNotFoundError) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Word not found: "${args.word}" (${lang})`);
-      }
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Synonym lookup failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const groups = await this.service.synonyms(word, lang);
+          return this.formatSynonymsAsText(word, groups);
+        } catch (err) {
+          if (err instanceof DictionaryNotFoundError) {
+            return `# Synonyms for "${word}"\n\nWord not found (${lang}).`;
+          }
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Synonyms for "${word}"\n\nSynonym lookup failed: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetPhonetics(args: GetPhoneticsInput): Promise<MCPToolCallResult> {
-    if (!args.word || typeof args.word !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'word is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.word);
+    if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'word is required and must be a string or a non-empty array of strings'
+      );
     }
     const lang = args.lang ?? 'en';
 
-    try {
-      const phonetics = await this.service.phonetics(args.word, lang);
-      const text = this.formatPhoneticsAsText(args.word, phonetics);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      if (err instanceof DictionaryNotFoundError) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Word not found: "${args.word}" (${lang})`);
-      }
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Phonetics lookup failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (word) => {
+        try {
+          const phonetics = await this.service.phonetics(word, lang);
+          return this.formatPhoneticsAsText(word, phonetics);
+        } catch (err) {
+          if (err instanceof DictionaryNotFoundError) {
+            return `# Phonetics for "${word}"\n\nWord not found (${lang}).`;
+          }
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Phonetics for "${word}"\n\nPhonetics lookup failed: ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private formatEntriesAsText(word: string, entries: DictionaryEntry[]): string {
