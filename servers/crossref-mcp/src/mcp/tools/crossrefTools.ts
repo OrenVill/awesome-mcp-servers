@@ -15,25 +15,25 @@ import {
 export const GET_WORK_DEF = {
   name: 'get_work',
   description:
-    "📚 I'm looking up DOI metadata\n\nLook up a scholarly work on Crossref by DOI (e.g. 10.1038/nphys1170). Returns title, authors, journal, year, type, URL, and abstract when available.",
+    "📚 I'm looking up DOI metadata\n\nLook up a scholarly work on Crossref by DOI (e.g. 10.1038/nphys1170). Returns title, authors, journal, year, type, URL, and abstract when available. Pass an array of DOIs to fetch several works at once in a single call.",
   keywords: ['crossref', 'doi', 'work', 'paper', 'article', 'scholarly', 'citation', 'metadata'],
 };
 export const SEARCH_WORKS_DEF = {
   name: 'search_works',
   description:
-    "📚 I'm searching scholarly works\n\nSearch Crossref for scholarly works by free-text query. Returns DOIs, titles, authors, and journal info. Use optional filter for date ranges (e.g. from-pub-date:2020).",
+    "📚 I'm searching scholarly works\n\nSearch Crossref for scholarly works by free-text query. Returns DOIs, titles, authors, and journal info. Use optional filter for date ranges (e.g. from-pub-date:2020). Pass an array to run several searches at once in a single call.",
   keywords: ['crossref', 'search', 'works', 'papers', 'articles', 'scholarly', 'research', 'publications'],
 };
 export const SEARCH_JOURNALS_DEF = {
   name: 'search_journals',
   description:
-    "📚 I'm searching journals\n\nSearch Crossref for journals by title or keywords. Returns ISSN, title, and publisher for each match.",
+    "📚 I'm searching journals\n\nSearch Crossref for journals by title or keywords. Returns ISSN, title, and publisher for each match. Pass an array to run several searches at once in a single call.",
   keywords: ['crossref', 'journals', 'search', 'issn', 'publisher', 'periodicals'],
 };
 export const GET_JOURNAL_DEF = {
   name: 'get_journal',
   description:
-    "📚 I'm looking up a journal\n\nGet journal details from Crossref by ISSN. Returns title, publisher, ISSNs, and total works count.",
+    "📚 I'm looking up a journal\n\nGet journal details from Crossref by ISSN. Returns title, publisher, ISSNs, and total works count. Pass an array of ISSNs to fetch several journals at once in a single call.",
   keywords: ['crossref', 'journal', 'issn', 'publisher', 'periodical'],
 };
 

@@ -44,7 +44,7 @@ export const GET_RECENT_SIGNIFICANT_DEF = {
 export const GET_EVENT_DEF = {
   name: 'get_event',
   description:
-    "🔎 I'm fetching a single earthquake event\n\nLook up one earthquake by its USGS event ID (e.g. `nc73649170`) and return its magnitude, location, time, depth, and details URL.",
+    "🔎 I'm fetching a single earthquake event\n\nLook up one earthquake by its USGS event ID (e.g. `nc73649170`) and return its magnitude, location, time, depth, and details URL. Pass an array of event IDs to fetch several at once in a single call.",
   keywords: ['usgs', 'earthquake', 'event', 'lookup', 'id', 'detail'],
 };
 

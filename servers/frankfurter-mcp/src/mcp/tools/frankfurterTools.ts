@@ -21,14 +21,14 @@ export const GET_LATEST_RATES_DEF = {
 export const CONVERT_CURRENCY_DEF = {
   name: 'convert_currency',
   description:
-    "💵 I'm converting currency\n\nConvert an amount from one currency to another using the latest ECB rate. Requires `amount`, `from`, and `to` ISO codes.",
+    "💵 I'm converting currency\n\nConvert an amount from one currency to another using the latest ECB rate. Requires `amount`, `from`, and `to` ISO codes. Pass an array of target currencies to convert to several at once in a single call.",
   keywords: ['frankfurter', 'forex', 'fx', 'currency', 'convert', 'exchange'],
 };
 
 export const GET_HISTORICAL_RATES_DEF = {
   name: 'get_historical_rates',
   description:
-    "🗓️ I'm looking up historical FX rates\n\nGet ECB rates for a specific date (YYYY-MM-DD). Optional base currency (default EUR) and comma-separated target symbols.",
+    "🗓️ I'm looking up historical FX rates\n\nGet ECB rates for a specific date (YYYY-MM-DD). Optional base currency (default EUR) and comma-separated target symbols. Pass an array of dates to fetch several at once in a single call.",
   keywords: ['frankfurter', 'forex', 'fx', 'currency', 'historical', 'rates', 'date'],
 };
 

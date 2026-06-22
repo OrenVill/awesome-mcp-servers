@@ -34,14 +34,14 @@ export const LIST_LAUNCHES_DEF = {
 export const GET_LAUNCH_DEF = {
   name: 'get_launch',
   description:
-    "🚀 I'm fetching a single SpaceX launch by id\n\nReturns full details of a specific SpaceX launch given its id.",
+    "🚀 I'm fetching a single SpaceX launch by id\n\nReturns full details of a specific SpaceX launch given its id. Pass an array of IDs to fetch several launches at once in a single call.",
   keywords: ['spacex', 'launch', 'detail', 'rocket', 'space'],
 };
 
 export const GET_ROCKET_DEF = {
   name: 'get_rocket',
   description:
-    "🚀 I'm fetching a SpaceX rocket by id\n\nReturns details about a SpaceX rocket including specs, success rate, first flight, and description.",
+    "🚀 I'm fetching a SpaceX rocket by id\n\nReturns details about a SpaceX rocket including specs, success rate, first flight, and description. Pass an array of IDs to fetch several rockets at once in a single call.",
   keywords: ['spacex', 'rocket', 'specs', 'falcon', 'starship', 'space'],
 };
 
