@@ -38,23 +38,47 @@ export const GET_WORK_DEF = {
 };
 
 export interface SearchBooksInput {
-  query: string;
+  query: string | string[];
   limit?: number;
   author?: string;
   title?: string;
 }
 
 export interface GetBookByIsbnInput {
-  isbn: string;
+  isbn: string | string[];
 }
 
 export interface GetAuthorInput {
-  id: string;
+  id: string | string[];
 }
 
 export interface GetWorkInput {
-  id: string;
+  id: string | string[];
 }
+
+/**
+ * Normalize a scalar-or-array input into an array plus a flag telling whether
+ * the caller supplied a batch. Single-value callers keep their original
+ * behaviour (one result, no batch separators); array callers get one section
+ * per item joined by a horizontal rule.
+ */
+function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
+  if (Array.isArray(value)) return { items: value, isBatch: true };
+  return { items: [value], isBatch: false };
+}
+
+/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
+function stringOrArraySchema(description: string): object {
+  return {
+    oneOf: [
+      { type: 'string' },
+      { type: 'array', items: { type: 'string' }, minItems: 1 },
+    ],
+    description: `${description} Accepts a single value or an array of values for batch requests.`,
+  };
+}
+
+const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class OpenLibraryTools {
   private service: OpenLibraryService;
@@ -76,10 +100,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: {
-            type: 'string',
-            description: 'Free-text search query (book title, keywords, etc.)',
-          },
+          query: stringOrArraySchema('Free-text search query (book title, keywords, etc.).'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -106,10 +127,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          isbn: {
-            type: 'string',
-            description: 'ISBN-10 or ISBN-13 (hyphens allowed and stripped)',
-          },
+          isbn: stringOrArraySchema('ISBN-10 or ISBN-13 (hyphens allowed and stripped).'),
         },
         required: ['isbn'],
       },
@@ -121,10 +139,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'string',
-            description: 'Open Library author key (e.g. "OL23919A")',
-          },
+          id: stringOrArraySchema('Open Library author key (e.g. "OL23919A").'),
         },
         required: ['id'],
       },
@@ -136,10 +151,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: {
-            type: 'string',
-            description: 'Open Library work key (e.g. "OL45804W")',
-          },
+          id: stringOrArraySchema('Open Library work key (e.g. "OL45804W").'),
         },
         required: ['id'],
       },
@@ -147,82 +159,157 @@ export class OpenLibraryTools {
   }
 
   async executeSearchBooks(args: SearchBooksInput): Promise<MCPToolCallResult> {
-    if (!args.query || typeof args.query !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'query is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.query);
+    if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'query is required and must be a string or a non-empty array of strings'
+      );
     }
     const limit = args.limit ?? 10;
     if (typeof limit !== 'number' || limit < 1 || limit > 100) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'limit must be a number between 1 and 100');
     }
 
-    try {
-      const response = await this.service.searchBooks({
-        query: args.query,
-        limit,
-        author: args.author,
-        title: args.title,
-      });
-      const docs = response.docs ?? [];
-      const text = this.formatSearchResultsAsText(docs, args.query, response.numFound);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Open Library search failed: ${message}`);
+    const sections = await Promise.all(
+      items.map(async (query) => {
+        try {
+          const response = await this.service.searchBooks({
+            query,
+            limit,
+            author: args.author,
+            title: args.title,
+          });
+          const docs = response.docs ?? [];
+          return this.formatSearchResultsAsText(docs, query, response.numFound);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `Open Library search failed for "${query}": ${message}`;
+        }
+      })
+    );
+
+    if (!isBatch) {
+      return { content: [{ type: 'text', text: sections[0] }] };
     }
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetBookByIsbn(args: GetBookByIsbnInput): Promise<MCPToolCallResult> {
-    if (!args.isbn || typeof args.isbn !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'isbn is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.isbn);
+    if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'isbn is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const book = await this.service.getBookByIsbn(args.isbn);
-      if (!book) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Book not found for ISBN "${args.isbn}"`);
+    if (!isBatch) {
+      const isbn = items[0];
+      try {
+        const book = await this.service.getBookByIsbn(isbn);
+        if (!book) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, `Book not found for ISBN "${isbn}"`);
+        }
+        const text = this.formatBookAsText(book, isbn);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to look up ISBN: ${message}`);
       }
-      const text = this.formatBookAsText(book, args.isbn);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to look up ISBN: ${message}`);
     }
+
+    const sections = await Promise.all(
+      items.map(async (isbn) => {
+        try {
+          const book = await this.service.getBookByIsbn(isbn);
+          if (!book) return `# ISBN ${isbn}\n\nBook not found for ISBN "${isbn}".`;
+          return this.formatBookAsText(book, isbn);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# ISBN ${isbn}\n\nFailed to look up ISBN: ${message}`;
+        }
+      })
+    );
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetAuthor(args: GetAuthorInput): Promise<MCPToolCallResult> {
-    if (!args.id || typeof args.id !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'id is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const author = await this.service.getAuthor(args.id);
-      if (!author) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Author not found: "${args.id}"`);
+    if (!isBatch) {
+      const id = items[0];
+      try {
+        const author = await this.service.getAuthor(id);
+        if (!author) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, `Author not found: "${id}"`);
+        }
+        const text = this.formatAuthorAsText(author);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get author: ${message}`);
       }
-      const text = this.formatAuthorAsText(author);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get author: ${message}`);
     }
+
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const author = await this.service.getAuthor(id);
+          if (!author) return `# Author ${id}\n\nAuthor not found: "${id}".`;
+          return this.formatAuthorAsText(author);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Author ${id}\n\nFailed to get author: ${message}`;
+        }
+      })
+    );
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   async executeGetWork(args: GetWorkInput): Promise<MCPToolCallResult> {
-    if (!args.id || typeof args.id !== 'string') {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id is required and must be a string');
+    const { items, isBatch } = normalizeToArray(args.id);
+    if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
+      return createMCPErrorResult(
+        MCPErrorCode.INVALID_INPUT,
+        'id is required and must be a string or a non-empty array of strings'
+      );
     }
 
-    try {
-      const work = await this.service.getWork(args.id);
-      if (!work) {
-        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Work not found: "${args.id}"`);
+    if (!isBatch) {
+      const id = items[0];
+      try {
+        const work = await this.service.getWork(id);
+        if (!work) {
+          return createMCPErrorResult(MCPErrorCode.API_ERROR, `Work not found: "${id}"`);
+        }
+        const text = this.formatWorkAsText(work);
+        return { content: [{ type: 'text', text }] };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get work: ${message}`);
       }
-      const text = this.formatWorkAsText(work);
-      return { content: [{ type: 'text', text }] };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      return createMCPErrorResult(MCPErrorCode.API_ERROR, `Failed to get work: ${message}`);
     }
+
+    const sections = await Promise.all(
+      items.map(async (id) => {
+        try {
+          const work = await this.service.getWork(id);
+          if (!work) return `# Work ${id}\n\nWork not found: "${id}".`;
+          return this.formatWorkAsText(work);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          return `# Work ${id}\n\nFailed to get work: ${message}`;
+        }
+      })
+    );
+    return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
   }
 
   private formatSearchResultsAsText(
