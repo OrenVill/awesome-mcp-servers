@@ -25,6 +25,7 @@ Collection of API-specialized MCP (Model Context Protocol) servers. Each server 
 | [datamuse-mcp](servers/datamuse-mcp/) | Datamuse — rhymes, synonyms, means-like, sounds-like, suggest (no API key) |
 | [trivia-mcp](servers/trivia-mcp/) | Open Trivia DB — questions, categories, per-category counts (no API key) |
 | [crossref-mcp](servers/crossref-mcp/) | Crossref — DOI metadata, works/journals search (no API key; optional `mailto` for polite pool) |
+- [Statsnet](https://github.com/usenetstate/statsnet-mcp) - Background check any company in the world: registration, executives, courts and finances. Remote: `https://statsnet.co/mcp` · Registry: `io.github.usenetstate/statsnet`
 
 ## Quick Start
 
