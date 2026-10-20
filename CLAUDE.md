@@ -14,23 +14,13 @@ Monorepo of API-specialized MCP (Model Context Protocol) servers. Each server wr
 
 | Server | Port | Purpose |
 |--------|------|---------|
-| [unified-mcp](servers/unified-mcp/) | 8000 | Aggregates all servers below + `search_tools` meta-tool + usage-based "popular tools" |
-| [open-meteo-mcp](servers/open-meteo-mcp/) | 3500 | Weather (geocoding, current, forecast) |
-| [rest-countries-mcp](servers/rest-countries-mcp/) | 3501 | Countries lookup/search |
-| [hacker-news-mcp](servers/hacker-news-mcp/) | 3502 | Top stories, items, comments, Algolia search |
-| [wikipedia-mcp](servers/wikipedia-mcp/) | 3503 | Article search, summary, full extract |
-| [arxiv-mcp](servers/arxiv-mcp/) | 3504 | arXiv papers — search, fetch by ID, recent by category |
-| [open-library-mcp](servers/open-library-mcp/) | 3505 | Open Library — book / ISBN / work / author lookup |
-| [nominatim-mcp](servers/nominatim-mcp/) | 3506 | OpenStreetMap geocoding (forward/reverse/lookup) |
-| [dictionary-mcp](servers/dictionary-mcp/) | 3507 | Free Dictionary API — definitions, synonyms, phonetics |
-| [frankfurter-mcp](servers/frankfurter-mcp/) | 3508 | Frankfurter — ECB FX rates, convert, historical, time series |
-| [usgs-earthquake-mcp](servers/usgs-earthquake-mcp/) | 3509 | USGS Earthquake Catalog — query / recent / by event |
-| [spacex-mcp](servers/spacex-mcp/) | 3510 | SpaceX — launches, rockets, latest/next |
-| [github-public-mcp](servers/github-public-mcp/) | 3511 | GitHub public REST (unauthenticated, ~60 req/hr) |
-| [mdn-compat-mcp](servers/mdn-compat-mcp/) | 3512 | MDN — search docs, get doc, browser-compat extract |
-| [datamuse-mcp](servers/datamuse-mcp/) | 3513 | Datamuse — rhymes, synonyms, ml, sl, suggest |
-| [trivia-mcp](servers/trivia-mcp/) | 3514 | Open Trivia DB — questions, categories, counts |
-| [crossref-mcp](servers/crossref-mcp/) | 3515 | Crossref — DOI metadata, works/journals search |
+| [unified-mcp](servers/unified-mcp/) | 8000 | Aggregates sibling APIs + `search_tools` / `execute_tools`; lazy load + env-gated providers |
+
+**Full list (ports, categories):** [docs/SERVERS.md](docs/SERVERS.md) — regenerate with `npm run docs:servers` when adding a workspace.
+
+Credential note: **careclinic** in unified only when `CARECLINIC_BEARER_TOKEN` is set on the process; standalone [careclinic-mcp](servers/careclinic-mcp/) on port 3516 always available.
+
+Representative siblings (all in unified by default): open-meteo (3500), rest-countries (3501), hacker-news (3502), wikipedia (3503), arxiv (3504) … through gbif (3536). See the catalog for the rest.
 
 ## Build & run
 

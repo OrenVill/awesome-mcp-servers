@@ -8,6 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **unified-mcp** — lazy provider loading: build-time `tool-catalog.json`, dynamic `import()` per API on first tool use; `UNIFIED_MCP_PROVIDERS` / `UNIFIED_MCP_EXCLUDE` / `UNIFIED_MCP_EAGER_LOAD`; optional `UNIFIED_MCP_MAX_LOADED_PROVIDERS` LRU eviction; `/health` reports catalog vs loaded providers.
+- **unified-mcp** — `requiredProcessEnv` provider gating: credential-backed providers (e.g. CareClinic) appear in `search_tools` / `execute_tools` only when the MCP process has the required env var (typically the client `env` block).
+- **careclinic-mcp** (port 3516) — proxy to official CareClinic remote MCP; each user supplies `CARECLINIC_BEARER_TOKEN`; optional in unified-mcp when that env is set.
+- **docs** — scalable [docs/SERVERS.md](docs/SERVERS.md) catalog via `npm run docs:servers`; root README focuses on unified-mcp.
+- **Ten new API servers** (ports 3517–3526), all registered in `unified-mcp`: **openalex-mcp**, **pubmed-mcp**, **wikidata-mcp**, **stackexchange-mcp**, **worldbank-mcp**, **openfda-mcp**, **musicbrainz-mcp**, **tvmaze-mcp**, **npm-registry-mcp**, **opensky-mcp**.
+- **Ten more API servers** (ports 3527–3536), registered in `unified-mcp`: **pokeapi-mcp**, **opennotify-mcp**, **worldtime-mcp**, **sunrise-sunset-mcp**, **semantic-scholar-mcp**, **openfoodfacts-mcp**, **jikan-mcp**, **swapi-mcp**, **pypi-mcp**, **gbif-mcp**.
 - **Batch (multi-request) inputs** — single-item tools across the servers now accept
   either a single value or an array on their primary input, running sub-requests
   concurrently and returning one result section per item (joined by `---`). Fully

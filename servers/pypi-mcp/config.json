@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3535,
+    "serverName": "pypi-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://pypi.org",
+    "simpleIndexUrl": "https://pypi.org/simple/",
+    "timeoutMs": 30000,
+    "searchMaxResults": 20
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3518,
+    "serverName": "pubmed-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+    "timeoutMs": 20000,
+    "toolName": "pubmed-mcp",
+    "email": ""
+  }
+}

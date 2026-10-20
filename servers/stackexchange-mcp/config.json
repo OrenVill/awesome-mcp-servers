@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3520,
+    "serverName": "stackexchange-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.stackexchange.com/2.3",
+    "defaultSite": "stackoverflow",
+    "timeoutMs": 15000
+  }
+}

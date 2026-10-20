@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3524,
+    "serverName": "tvmaze-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.tvmaze.com",
+    "timeoutMs": 15000
+  }
+}

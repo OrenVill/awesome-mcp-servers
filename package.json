@@ -9,7 +9,8 @@
     "start": "turbo run start --filter=unified-mcp",
     "start:http": "turbo run start:http --filter=unified-mcp",
     "start:stdio": "turbo run start:stdio --filter=unified-mcp",
-    "start:all": "turbo run start"
+    "start:all": "turbo run start",
+    "docs:servers": "node scripts/generate-servers-doc.mjs"
   },
   "devDependencies": {
     "turbo": "^2.9.6"
