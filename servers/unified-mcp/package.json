@@ -5,7 +5,7 @@
   "main": "dist/app.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node dist/registry/generateCatalog.js",
     "start": "node dist/app.js",
     "start:stdio": "MCP_TRANSPORT=stdio node dist/app.js",
     "start:http": "MCP_TRANSPORT=http node dist/app.js"
@@ -32,7 +32,28 @@
     "mdn-compat-mcp": "*",
     "datamuse-mcp": "*",
     "trivia-mcp": "*",
-    "crossref-mcp": "*"
+    "crossref-mcp": "*",
+    "openalex-mcp": "*",
+    "pubmed-mcp": "*",
+    "wikidata-mcp": "*",
+    "stackexchange-mcp": "*",
+    "worldbank-mcp": "*",
+    "openfda-mcp": "*",
+    "musicbrainz-mcp": "*",
+    "tvmaze-mcp": "*",
+    "npm-registry-mcp": "*",
+    "opensky-mcp": "*",
+    "pokeapi-mcp": "*",
+    "opennotify-mcp": "*",
+    "worldtime-mcp": "*",
+    "sunrise-sunset-mcp": "*",
+    "semantic-scholar-mcp": "*",
+    "openfoodfacts-mcp": "*",
+    "jikan-mcp": "*",
+    "swapi-mcp": "*",
+    "pypi-mcp": "*",
+    "gbif-mcp": "*",
+    "careclinic-mcp": "*"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3516,
+    "serverName": "careclinic-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "remoteMcpUrl": "https://mcp.careclinic.io/mcp",
+    "timeoutMs": 60000
+  }
+}

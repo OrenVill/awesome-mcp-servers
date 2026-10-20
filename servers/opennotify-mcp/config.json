@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3528,
+    "serverName": "opennotify-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "http://api.open-notify.org",
+    "timeoutMs": 15000
+  }
+}

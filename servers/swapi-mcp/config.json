@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3534,
+    "serverName": "swapi-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://swapi.dev/api",
+    "timeoutMs": 15000
+  }
+}

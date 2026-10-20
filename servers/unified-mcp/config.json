@@ -79,6 +79,102 @@
       "baseUrl": "https://api.crossref.org",
       "timeoutMs": 15000,
       "mailto": ""
+    },
+    "openalex": {
+      "baseUrl": "https://api.openalex.org",
+      "timeoutMs": 15000,
+      "mailto": ""
+    },
+    "pubmed": {
+      "baseUrl": "https://eutils.ncbi.nlm.nih.gov/entrez/eutils",
+      "timeoutMs": 20000,
+      "toolName": "unified-mcp",
+      "email": ""
+    },
+    "wikidata": {
+      "mediaWikiBaseUrl": "https://www.wikidata.org/w/api.php",
+      "defaultLanguage": "en",
+      "timeoutMs": 15000
+    },
+    "stackexchange": {
+      "baseUrl": "https://api.stackexchange.com/2.3",
+      "defaultSite": "stackoverflow",
+      "timeoutMs": 15000
+    },
+    "worldbank": {
+      "baseUrl": "https://api.worldbank.org/v2",
+      "timeoutMs": 20000,
+      "defaultSourceId": "2"
+    },
+    "openfda": {
+      "baseUrl": "https://api.fda.gov",
+      "timeoutMs": 15000
+    },
+    "musicbrainz": {
+      "baseUrl": "https://musicbrainz.org/ws/2",
+      "timeoutMs": 15000,
+      "userAgent": "awesome-mcp-servers/1.0",
+      "minRequestIntervalMs": 1000
+    },
+    "tvmaze": {
+      "baseUrl": "https://api.tvmaze.com",
+      "timeoutMs": 15000
+    },
+    "npmRegistry": {
+      "baseUrl": "https://registry.npmjs.org",
+      "timeoutMs": 15000
+    },
+    "opensky": {
+      "baseUrl": "https://opensky-network.org/api",
+      "timeoutMs": 20000
+    },
+    "pokeapi": {
+      "baseUrl": "https://pokeapi.co/api/v2",
+      "timeoutMs": 15000
+    },
+    "opennotify": {
+      "baseUrl": "http://api.open-notify.org",
+      "timeoutMs": 15000
+    },
+    "worldtime": {
+      "baseUrl": "http://worldtimeapi.org/api",
+      "timeoutMs": 15000
+    },
+    "sunriseSunset": {
+      "baseUrl": "https://api.sunrise-sunset.org/json",
+      "timeoutMs": 15000
+    },
+    "semanticScholar": {
+      "baseUrl": "https://api.semanticscholar.org/graph/v1",
+      "timeoutMs": 20000,
+      "apiKey": ""
+    },
+    "openfoodfacts": {
+      "baseUrl": "https://world.openfoodfacts.org/api/v2",
+      "timeoutMs": 15000
+    },
+    "jikan": {
+      "baseUrl": "https://api.jikan.moe/v4",
+      "timeoutMs": 15000,
+      "minRequestIntervalMs": 334
+    },
+    "swapi": {
+      "baseUrl": "https://swapi.dev/api",
+      "timeoutMs": 15000
+    },
+    "pypi": {
+      "baseUrl": "https://pypi.org",
+      "simpleIndexUrl": "https://pypi.org/simple/",
+      "timeoutMs": 30000,
+      "searchMaxResults": 20
+    },
+    "gbif": {
+      "baseUrl": "https://api.gbif.org/v1",
+      "timeoutMs": 15000
+    },
+    "careclinic": {
+      "remoteMcpUrl": "https://mcp.careclinic.io/mcp",
+      "timeoutMs": 60000
     }
   }
 }

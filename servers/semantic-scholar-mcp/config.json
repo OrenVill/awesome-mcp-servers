@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3531,
+    "serverName": "semantic-scholar-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.semanticscholar.org/graph/v1",
+    "timeoutMs": 20000,
+    "apiKey": ""
+  }
+}

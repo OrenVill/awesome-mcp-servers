@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3525,
+    "serverName": "npm-registry-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://registry.npmjs.org",
+    "timeoutMs": 15000
+  }
+}

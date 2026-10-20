@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3522,
+    "serverName": "openfda-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.fda.gov",
+    "timeoutMs": 15000
+  }
+}

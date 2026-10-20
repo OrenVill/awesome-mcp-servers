@@ -11,7 +11,7 @@ import cors from 'cors';
 import { randomUUID } from 'crypto';
 
 import type { MCPServerConfig } from '../config.js';
-import { buildToolRegistry, type RegistryToolDefinition } from '../registry/toolRegistry.js';
+import { createLazyToolRegistry, type LazyToolRegistry } from '../registry/toolRegistry.js';
 import { UsageTracker } from '../registry/usageTracker.js';
 
 const SEARCH_TOOLS_DEF: Tool = {
@@ -72,48 +72,9 @@ function log(server: string, event: string, data?: Record<string, unknown>): voi
   console.error(msg);
 }
 
-function searchToolsByKeywords(
-  registry: Map<string, RegistryToolDefinition>,
-  keywords: string,
-  limit: number
-): RegistryToolDefinition[] {
-  const trimmed = keywords.trim();
-  if (trimmed.length === 0) {
-    return [];
-  }
-  if (trimmed === '*') {
-    return Array.from(registry.values());
-  }
-
-  const terms = trimmed
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((t) => t.toLowerCase());
-  if (terms.length === 0) {
-    return [];
-  }
-
-  const scored = Array.from(registry.values()).map((tool) => {
-    const searchable = `${tool.name} ${tool.description} ${(tool.keywords ?? []).join(' ')}`.toLowerCase();
-    let matches = 0;
-    for (const term of terms) {
-      if (searchable.includes(term)) {
-        matches++;
-      }
-    }
-    return { tool, matches };
-  });
-
-  return scored
-    .filter((s) => s.matches > 0)
-    .sort((a, b) => b.matches - a.matches)
-    .slice(0, limit)
-    .map((s) => s.tool);
-}
-
 export class MCPServer {
   private config: MCPServerConfig;
-  private registry: Map<string, RegistryToolDefinition>;
+  private registry: LazyToolRegistry;
   private usageTracker: UsageTracker;
   private server?: Server;
   private httpApp?: express.Application;
@@ -121,9 +82,9 @@ export class MCPServer {
   private transports: Map<string, StreamableHTTPServerTransport> = new Map();
   private apiKeyByValue: Map<string, string>;
 
-  constructor(config: MCPServerConfig) {
+  constructor(config: MCPServerConfig, registry: LazyToolRegistry) {
     this.config = config;
-    this.registry = buildToolRegistry();
+    this.registry = registry;
     this.usageTracker = new UsageTracker(config.usageFile);
     this.usageTracker.load();
     this.apiKeyByValue = new Map(
@@ -157,7 +118,7 @@ export class MCPServer {
     const push = (name: string): void => {
       if (ordered.length >= limit) return;
       if (seen.has(name)) return;
-      if (!this.registry.has(name)) return;
+      if (!this.registry.hasTool(name)) return;
       seen.add(name);
       ordered.push(name);
     };
@@ -169,7 +130,7 @@ export class MCPServer {
   private popularToolsToMCP(): Tool[] {
     const names = this.getPopularToolNames();
     return names.map((name) => {
-      const def = this.registry.get(name)!;
+      const def = this.registry.getToolMeta(name)!;
       return {
         name: def.name,
         description: def.description,
@@ -210,7 +171,7 @@ export class MCPServer {
       try {
         if (name === 'search_tools') {
           const keywords = String(safeArgs.keywords ?? '');
-          const matches = searchToolsByKeywords(this.registry, keywords, 10);
+          const matches = this.registry.searchByKeywords(keywords, 10);
           const toolList = matches.map((t) => ({
             name: t.name,
             description: t.description,
@@ -233,12 +194,11 @@ export class MCPServer {
             calls.map(async (call) => {
               const toolName = String(call?.name ?? '');
               const toolArgs = (call?.arguments ?? {}) as Record<string, unknown>;
-              const def = this.registry.get(toolName);
-              if (!def) {
+              if (!this.registry.hasTool(toolName)) {
                 return { name: toolName, ok: false, error: `Unknown tool: ${toolName}` };
               }
               try {
-                const result = await def.execute(toolArgs);
+                const result = await this.registry.executeTool(toolName, toolArgs);
                 this.usageTracker.increment(toolName);
                 return { name: toolName, ok: true, content: result.content };
               } catch (err) {
@@ -259,11 +219,10 @@ export class MCPServer {
           return { content: [{ type: 'text', text }] };
         }
 
-        const def = this.registry.get(name);
-        if (!def) {
+        if (!this.registry.hasTool(name)) {
           throw new Error(`Unknown tool: ${name}`);
         }
-        const result = await def.execute(safeArgs);
+        const result = await this.registry.executeTool(name, safeArgs);
         this.usageTracker.increment(name);
         log(this.config.serverName, 'tool', { name, status: 'ok' });
         return result;
@@ -283,6 +242,7 @@ export class MCPServer {
       keyCount: this.apiKeyByValue.size,
       clientNames: Array.from(this.apiKeyByValue.values()),
     });
+    log(this.config.serverName, 'tool registry', this.registry.getStatus());
   }
 
   async startStdio(): Promise<void> {
@@ -325,6 +285,7 @@ export class MCPServer {
         status: 'healthy',
         server: this.config.serverName,
         version: this.config.serverVersion,
+        tools: this.registry.getStatus(),
         timestamp: new Date().toISOString(),
       });
     });
@@ -491,7 +452,8 @@ export class MCPServer {
 }
 
 export async function createMCPServer(config: MCPServerConfig): Promise<MCPServer> {
-  const server = new MCPServer(config);
+  const registry = await createLazyToolRegistry();
+  const server = new MCPServer(config, registry);
   await server.start();
   return server;
 }
