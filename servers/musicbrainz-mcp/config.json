@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3523,
+    "serverName": "musicbrainz-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://musicbrainz.org/ws/2",
+    "timeoutMs": 15000,
+    "userAgent": "awesome-mcp-servers/1.0",
+    "minRequestIntervalMs": 1000
+  }
+}

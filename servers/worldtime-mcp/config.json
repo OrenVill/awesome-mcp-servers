@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3529,
+    "serverName": "worldtime-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "http://worldtimeapi.org/api",
+    "timeoutMs": 15000
+  }
+}

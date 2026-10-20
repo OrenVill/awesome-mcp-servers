@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3521,
+    "serverName": "worldbank-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.worldbank.org/v2",
+    "timeoutMs": 20000,
+    "defaultSourceId": "2"
+  }
+}

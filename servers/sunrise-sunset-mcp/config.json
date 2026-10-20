@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3530,
+    "serverName": "sunrise-sunset-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://api.sunrise-sunset.org/json",
+    "timeoutMs": 15000
+  }
+}

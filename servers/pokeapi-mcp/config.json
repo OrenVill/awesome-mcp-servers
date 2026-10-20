@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "http",
+    "httpPort": 3527,
+    "serverName": "pokeapi-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://pokeapi.co/api/v2",
+    "timeoutMs": 15000
+  }
+}

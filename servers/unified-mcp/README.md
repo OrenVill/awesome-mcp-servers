@@ -73,6 +73,37 @@ All bundled tools:
 
 API base URLs and timeouts are overridable via env (e.g. `OPEN_METEO_GEOCODING_URL`, `REST_COUNTRIES_BASE_URL`).
 
+## Scaling to many APIs (lazy providers)
+
+`unified-mcp` is **one process**. It does **not** start a separate server per API. To stay light as the monorepo grows (100+ providers):
+
+| Variable | Effect |
+|----------|--------|
+| `UNIFIED_MCP_PROVIDERS` | Allowlist of provider ids (comma-separated), e.g. `open-meteo,wikipedia,pubmed`. Only these appear in `search_tools` / `execute_tools`. |
+| `UNIFIED_MCP_EXCLUDE` | Remove providers from the default full set (ignored when `UNIFIED_MCP_PROVIDERS` is set). |
+| `UNIFIED_MCP_EAGER_LOAD` | Set `true` to load all **enabled** providers at startup (old behavior; uses more RAM). Default: **lazy** — each provider’s code loads on the first tool call that needs it. |
+| `UNIFIED_MCP_MAX_LOADED_PROVIDERS` | Cap how many providers stay loaded at once (e.g. `10`). When a new provider loads, the **least recently used** loaded provider is unloaded (tool executors + service caches dropped; Node may keep the imported module). `0` or unset = unlimited. |
+
+### Process-env gating (credentials)
+
+Some providers declare `requiredProcessEnv` in the unified registry. At startup, unified checks **`process.env`** only (what your MCP client or shell exported). If a required variable is missing, that provider’s tools are **not** in `search_tools`, `execute_tools`, or the usage-based popular list.
+
+| Provider id | Required env |
+|-------------|----------------|
+| `careclinic` | `CARECLINIC_BEARER_TOKEN` |
+
+Optional API keys (e.g. `SEMANTIC_SCHOLAR_API_KEY`) do **not** gate visibility — tools stay available with lower rate limits.
+
+At build time, `npm run build` writes `dist/registry/tool-catalog.json` for providers that pass env checks at build time. Env-gated providers are hydrated at runtime when the variable is set.
+
+`GET /health` includes `tools.enabledProviders`, `tools.catalogTools`, `tools.loadedProviders`, and `tools.providersHiddenMissingEnv`.
+
+Provider ids match workspace names without the `-mcp` suffix (e.g. `github-public`, `npm-registry`, `semantic-scholar`). Run with a trimmed list for laptops or CI:
+
+```bash
+UNIFIED_MCP_PROVIDERS=open-meteo,wikipedia,hacker-news npm start
+```
+
 ## Client Authentication (HTTP)
 
 The HTTP transport is **open by default** so local development just works. To require a key from connecting clients, set `UNIFIED_MCP_API_KEYS` to a JSON object mapping a friendly name (used in logs) to a secret:

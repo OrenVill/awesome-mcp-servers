@@ -1,0 +1,13 @@
+{
+  "mcp": {
+    "enabled": true,
+    "transport": "both",
+    "httpPort": 3532,
+    "serverName": "openfoodfacts-mcp",
+    "serverVersion": "1.0.0"
+  },
+  "api": {
+    "baseUrl": "https://world.openfoodfacts.org/api/v2",
+    "timeoutMs": 15000
+  }
+}
