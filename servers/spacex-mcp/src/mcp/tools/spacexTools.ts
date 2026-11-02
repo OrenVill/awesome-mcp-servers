@@ -151,7 +151,6 @@ export class SpacexTools {
         properties: {
           ...batchStringProperties('id', 'SpaceX launch id (e.g. "5eb87cd9ffd86e000604b32a").'),
         },
-        required: ['id'],
       },
     };
   }
@@ -163,7 +162,6 @@ export class SpacexTools {
         properties: {
           ...batchStringProperties('id', 'SpaceX rocket id (e.g. "5e9d0d95eda69973a809d1ec").'),
         },
-        required: ['id'],
       },
     };
   }

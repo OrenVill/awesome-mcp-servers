@@ -125,7 +125,6 @@ export class WikidataTools {
             default: 'en',
           },
         },
-        required: ['id'],
       },
     };
   }
@@ -144,7 +143,6 @@ export class WikidataTools {
             default: 'en',
           },
         },
-        required: ['id'],
       },
     };
   }

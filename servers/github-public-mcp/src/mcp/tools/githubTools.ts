@@ -112,7 +112,7 @@ export class GithubTools {
           },
           ...batchStringProperties('repo', 'Repository name, e.g. "next.js".'),
         },
-        required: ['owner', 'repo'],
+        required: ['owner'],
       },
     };
   }
@@ -124,7 +124,6 @@ export class GithubTools {
         properties: {
           ...batchStringProperties('username', 'GitHub username or organization login, e.g. "torvalds".'),
         },
-        required: ['username'],
       },
     };
   }
@@ -153,7 +152,7 @@ export class GithubTools {
             default: 20,
           },
         },
-        required: ['owner', 'repo'],
+        required: ['owner'],
       },
     };
   }
@@ -176,7 +175,7 @@ export class GithubTools {
             default: 10,
           },
         },
-        required: ['owner', 'repo'],
+        required: ['owner'],
       },
     };
   }
@@ -195,7 +194,6 @@ export class GithubTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }

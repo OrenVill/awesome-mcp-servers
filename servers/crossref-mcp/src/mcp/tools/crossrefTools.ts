@@ -89,7 +89,6 @@ export class CrossrefTools {
         properties: {
           ...batchStringProperties('doi', 'DOI of the work to look up (e.g. "10.1038/nphys1170").'),
         },
-        required: ['doi'],
       },
     };
   }
@@ -113,7 +112,6 @@ export class CrossrefTools {
               'Optional Crossref filter expression, e.g. "from-pub-date:2020" or "type:journal-article"',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -132,7 +130,6 @@ export class CrossrefTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -144,7 +141,6 @@ export class CrossrefTools {
         properties: {
           ...batchStringProperties('issn', 'ISSN of the journal (e.g. "2167-8359").'),
         },
-        required: ['issn'],
       },
     };
   }

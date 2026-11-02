@@ -86,7 +86,6 @@ export class CountriesTools {
         properties: {
           ...batchStringProperties('nameOrCode', 'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").'),
         },
-        required: ['nameOrCode'],
       },
     };
   }
@@ -105,7 +104,7 @@ export class CountriesTools {
           },
           ...batchStringProperties('query', 'Search value (e.g. "Europe", "South America", "Paris").'),
         },
-        required: ['searchType', 'query'],
+        required: ['searchType'],
       },
     };
   }

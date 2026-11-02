@@ -71,7 +71,6 @@ export class GeocodingTools {
             pattern: '^[A-Za-z]{2}$',
           },
         },
-        required: ['name'],
       },
     };
   }

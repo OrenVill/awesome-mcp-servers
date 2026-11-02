@@ -4,6 +4,7 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import { getConfig } from '../../config.js';
+import { exampleStringProperty } from '@awesome-mcp/mcp-schema-helpers';
 import {
   GbifService,
   type GbifOccurrence,
@@ -72,10 +73,10 @@ export class GbifTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          q: {
-            type: 'string',
-            description: 'Free-text search query (scientific or vernacular name, e.g. "Panthera leo" or "lion").',
-          },
+          q: exampleStringProperty(
+            'Free-text search query (scientific or vernacular name).',
+            'Panthera leo'
+          ),
           limit: {
             type: 'number',
             description: 'Maximum number of species results (1-300)',
@@ -84,7 +85,6 @@ export class GbifTools {
             default: 20,
           },
         },
-        required: ['q'],
       },
     };
   }
@@ -118,10 +118,7 @@ export class GbifTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          scientificName: {
-            type: 'string',
-            description: 'Scientific name to match (e.g. "Homo sapiens").',
-          },
+          scientificName: exampleStringProperty('Scientific name to match.', 'Homo sapiens'),
           country: {
             type: 'string',
             description: 'Optional ISO 3166-1 alpha-2 country code filter (e.g. "US", "GB").',
@@ -134,7 +131,6 @@ export class GbifTools {
             default: 20,
           },
         },
-        required: ['scientificName'],
       },
     };
   }

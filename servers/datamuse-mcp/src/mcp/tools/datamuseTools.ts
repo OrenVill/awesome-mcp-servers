@@ -101,7 +101,6 @@ export class DatamuseTools {
             default: 20,
           },
         },
-        required: ['word'],
       },
     };
   }
@@ -120,7 +119,6 @@ export class DatamuseTools {
             default: 20,
           },
         },
-        required: ['word'],
       },
     };
   }
@@ -139,7 +137,6 @@ export class DatamuseTools {
             default: 20,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -158,7 +155,6 @@ export class DatamuseTools {
             default: 20,
           },
         },
-        required: ['word'],
       },
     };
   }
@@ -177,7 +173,6 @@ export class DatamuseTools {
             default: 10,
           },
         },
-        required: ['prefix'],
       },
     };
   }

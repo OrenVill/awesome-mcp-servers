@@ -82,7 +82,6 @@ export class DictionaryTools {
             default: 'en',
           },
         },
-        required: ['word'],
       },
     };
   }
@@ -99,7 +98,6 @@ export class DictionaryTools {
             default: 'en',
           },
         },
-        required: ['word'],
       },
     };
   }
@@ -116,7 +114,6 @@ export class DictionaryTools {
             default: 'en',
           },
         },
-        required: ['word'],
       },
     };
   }

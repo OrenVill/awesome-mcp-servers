@@ -86,7 +86,6 @@ export class ArxivTools {
               'Optional arXiv category filter (e.g. "cs.AI", "stat.ML", "math.AG")',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -100,7 +99,6 @@ export class ArxivTools {
         properties: {
           ...batchStringProperties('id', 'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format).'),
         },
-        required: ['id'],
       },
     };
   }

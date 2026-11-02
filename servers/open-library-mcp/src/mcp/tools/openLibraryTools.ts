@@ -103,7 +103,6 @@ export class OpenLibraryTools {
             description: 'Optional exact title filter',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -115,7 +114,6 @@ export class OpenLibraryTools {
         properties: {
           ...batchStringProperties('isbn', 'ISBN-10 or ISBN-13 (hyphens allowed and stripped).'),
         },
-        required: ['isbn'],
       },
     };
   }
@@ -127,7 +125,6 @@ export class OpenLibraryTools {
         properties: {
           ...batchStringProperties('id', 'Open Library author key (e.g. "OL23919A").'),
         },
-        required: ['id'],
       },
     };
   }
@@ -139,7 +136,6 @@ export class OpenLibraryTools {
         properties: {
           ...batchStringProperties('id', 'Open Library work key (e.g. "OL45804W").'),
         },
-        required: ['id'],
       },
     };
   }

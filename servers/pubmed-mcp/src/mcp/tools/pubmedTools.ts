@@ -124,7 +124,6 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -143,7 +142,6 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['pmid'],
       },
     };
   }
@@ -162,7 +160,6 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['pmid'],
       },
     };
   }

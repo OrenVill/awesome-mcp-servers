@@ -138,7 +138,7 @@ export class FrankfurterTools {
           },
           ...batchStringProperties('to', 'Target currency ISO code, e.g. "EUR".'),
         },
-        required: ['amount', 'from', 'to'],
+        required: ['amount', 'from'],
       },
     };
   }
@@ -160,7 +160,6 @@ export class FrankfurterTools {
             description: 'Comma-separated target currency ISO codes.',
           },
         },
-        required: ['date'],
       },
     };
   }

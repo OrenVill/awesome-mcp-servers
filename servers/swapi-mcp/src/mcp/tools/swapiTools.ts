@@ -109,7 +109,6 @@ export class SwapiTools {
         properties: {
           ...batchStringProperties('id', 'SWAPI people id (e.g. "1") or resource URL.'),
         },
-        required: ['id'],
       },
     };
   }
@@ -123,7 +122,6 @@ export class SwapiTools {
         properties: {
           ...batchStringProperties('id', 'SWAPI planets id (e.g. "1") or resource URL.'),
         },
-        required: ['id'],
       },
     };
   }

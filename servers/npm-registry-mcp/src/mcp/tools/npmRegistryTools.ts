@@ -71,7 +71,6 @@ export class NpmRegistryTools {
         properties: {
           ...batchStringProperties('name', 'npm package name, e.g. "lodash" or "@types/node".'),
         },
-        required: ['name'],
       },
     };
   }

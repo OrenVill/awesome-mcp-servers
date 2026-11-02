@@ -122,7 +122,6 @@ export class JikanTools {
             default: 1,
           },
         },
-        required: ['query'],
       },
     };
   }

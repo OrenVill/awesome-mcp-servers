@@ -152,6 +152,43 @@ function formatSeriesAsText(
   return `**${title}** — ${countryName} (\`${countryCode}\` / \`${indicatorId}\`)\n\n${valueLines.join('\n')}`;
 }
 
+function formatSeriesAsJson(
+  countryCode: string,
+  indicatorId: string,
+  series: WBCountryIndicatorRow[],
+  dateFilter?: string
+): string {
+  if (series.length === 0) {
+    return JSON.stringify(
+      {
+        country_code: countryCode,
+        indicator_id: indicatorId,
+        date_filter: dateFilter ?? null,
+        observations: [],
+        message: 'no_data',
+      },
+      null,
+      2
+    );
+  }
+
+  const sample = series[0];
+  const rows = [...series].sort((a, b) => Number(b.date) - Number(a.date));
+  const payload = {
+    country_code: countryCode,
+    country_name: sample.country?.value ?? countryCode,
+    indicator_id: indicatorId,
+    indicator_name: sample.indicator?.value ?? indicatorId,
+    date_filter: dateFilter ?? null,
+    observations: rows.map((row) => ({
+      date: row.date,
+      value: row.value,
+      unit: row.unit ?? null,
+    })),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
 function resolveIndicatorPairs(
   countryCode: string | string[],
   indicatorId: string | string[]
@@ -255,7 +292,6 @@ export class WorldbankTools {
               'World Bank data source id (default 2 = World Development Indicators).',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -267,12 +303,19 @@ export class WorldbankTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          ...batchStringProperties('country_code', 'World Bank country id or ISO2 code (e.g. us, USA, IND).'),
-          ...batchStringProperties('indicator_id', 'Indicator id (e.g. SP.POP.TOTL, NY.GDP.MKTP.CD).'),
+          ...batchStringProperties('country_code', 'World Bank country id or ISO2 code.', {
+            singularExample: 'usa',
+            pluralExample: ['usa', 'deu'],
+          }),
+          ...batchStringProperties('indicator_id', 'Indicator id from search_indicators.', {
+            singularExample: 'SP.POP.TOTL',
+            pluralExample: ['SP.POP.TOTL', 'NY.GDP.MKTP.CD'],
+          }),
           date: {
             type: 'string',
             description:
-              'Optional year (YYYY) or inclusive range (YYYY:YYYY) passed to the World Bank API.',
+              'Optional year (YYYY) or inclusive range (YYYY:YYYY) passed to the World Bank API. Example: "2020" or "2000:2020".',
+            examples: ['2020', '2000:2020'],
           },
           per_page: {
             type: 'integer',
@@ -281,7 +324,6 @@ export class WorldbankTools {
             description: 'Max observations to return (default 500).',
           },
         },
-        required: ['country_code', 'indicator_id'],
       },
     };
   }
@@ -369,7 +411,7 @@ export class WorldbankTools {
           perPage: input.per_page,
         });
         sections.push(
-          formatSeriesAsText(
+          formatSeriesAsJson(
             result.countryCode,
             result.indicatorId,
             result.series,
