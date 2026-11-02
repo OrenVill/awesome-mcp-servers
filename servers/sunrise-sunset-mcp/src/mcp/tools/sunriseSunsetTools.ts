@@ -5,10 +5,7 @@ import {
 } from '../types/mcpTypes.js';
 import {
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
   formatInputFieldError,
   resolveCoordinatePairs,
 } from '@awesome-mcp/mcp-schema-helpers';
@@ -101,7 +98,10 @@ export class SunriseSunsetTools {
     if ('field' in coord) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(coord));
     }
-    const pairs = coord.pairs.map((p) => ({ lat: p.lat, lng: p.lon }));
+  const pairs: Array<{ lat: number; lng: number }> = coord.pairs.map((p) => ({
+    lat: p.lat,
+    lng: p.lon,
+  }));
     const isBatch = coord.isBatch;
 
     if (args.date !== undefined) {

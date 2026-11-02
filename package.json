@@ -5,7 +5,7 @@
     "servers/*"
   ],
   "scripts": {
-    "build": "turbo run build",
+    "build": "turbo run build --filter=@awesome-mcp/mcp-schema-helpers && turbo run build",
     "start": "turbo run start --filter=unified-mcp",
     "start:http": "turbo run start:http --filter=unified-mcp",
     "start:stdio": "turbo run start:stdio --filter=unified-mcp",
