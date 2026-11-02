@@ -96,7 +96,6 @@ export class OpenAlexTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -108,7 +107,6 @@ export class OpenAlexTools {
         properties: {
           ...batchStringProperties('id', 'OpenAlex work ID (W… or full openalex.org URL) or DOI (e.g. "10.1038/nature12373").'),
         },
-        required: ['id'],
       },
     };
   }
@@ -127,7 +125,6 @@ export class OpenAlexTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -139,7 +136,6 @@ export class OpenAlexTools {
         properties: {
           ...batchStringProperties('id', 'OpenAlex author ID (A… or full openalex.org URL).'),
         },
-        required: ['id'],
       },
     };
   }

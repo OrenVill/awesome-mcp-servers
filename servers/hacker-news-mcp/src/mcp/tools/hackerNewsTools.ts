@@ -181,7 +181,6 @@ export class HackerNewsTools {
             default: 0,
           },
         },
-        required: ['query'],
       },
     };
   }

@@ -91,7 +91,6 @@ export class MdnTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -108,7 +107,6 @@ export class MdnTools {
             default: 'en-US',
           },
         },
-        required: ['slug'],
       },
     };
   }
@@ -125,7 +123,6 @@ export class MdnTools {
             default: 'en-US',
           },
         },
-        required: ['slug'],
       },
     };
   }

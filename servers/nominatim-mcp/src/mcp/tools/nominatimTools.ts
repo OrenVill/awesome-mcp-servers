@@ -6,9 +6,7 @@ import {
 import {
   BATCH_SEPARATOR,
   batchStringProperties,
-  batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchCoordinateProperties,
   formatInputFieldError,
   resolveCoordinatePairs,
   normalizeStringArgFromArgs,
@@ -89,7 +87,6 @@ export class NominatimTools {
             description: 'Optional comma-separated ISO 3166-1 alpha-2 country codes (e.g. "us,ca") to restrict results',
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -99,14 +96,7 @@ export class NominatimTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          ...batchNumberProperties('lat', 'Latitude in decimal degrees (-90 to 90).', {
-            minimum: -90,
-            maximum: 90,
-          }),
-          ...batchNumberProperties('lon', 'Longitude in decimal degrees (-180 to 180).', {
-            minimum: -180,
-            maximum: 180,
-          }),
+          ...batchCoordinateProperties('lat', 'lon'),
           zoom: {
             type: 'number',
             description: 'Level of detail for the result (0=country, 18=building). Default 18.',
@@ -115,7 +105,6 @@ export class NominatimTools {
             default: 18,
           },
         },
-        required: ['lat', 'lon'],
       },
     };
   }
@@ -221,7 +210,7 @@ export class NominatimTools {
         if (place.error) {
           return createMCPErrorResult(MCPErrorCode.API_ERROR, `Nominatim reverse geocode: ${place.error}`);
         }
-        const text = this.formatReverseAsText(place, latVal, lonVal);
+        const text = this.formatReverseAsJson(place, latVal, lonVal);
         return { content: [{ type: 'text', text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
@@ -240,7 +229,7 @@ export class NominatimTools {
           if (place.error) {
             return `Reverse geocode for ${latVal}, ${lonVal}:\n\nNominatim reverse geocode: ${place.error}`;
           }
-          return this.formatReverseAsText(place, latVal, lonVal);
+          return this.formatReverseAsJson(place, latVal, lonVal);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           return `Reverse geocode for ${latVal}, ${lonVal}:\n\nNominatim reverse geocode failed: ${message}`;
@@ -293,6 +282,27 @@ export class NominatimTools {
       text += '\n';
     });
     return text.trim();
+  }
+
+  private formatReverseAsJson(
+    place: NominatimReversePlace,
+    lat: number,
+    lon: number
+  ): string {
+    const payload = {
+      query: { lat, lon },
+      display_name: place.display_name ?? null,
+      matched: {
+        lat: place.lat ?? null,
+        lon: place.lon ?? null,
+      },
+      osm: place.osm_type && place.osm_id != null ? `${place.osm_type}/${place.osm_id}` : null,
+      class: place.class ?? null,
+      type: place.type ?? null,
+      address: place.address ?? null,
+      error: place.error ?? null,
+    };
+    return JSON.stringify(payload, null, 2);
   }
 
   private formatReverseAsText(place: NominatimReversePlace, lat: number, lon: number): string {

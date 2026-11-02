@@ -159,7 +159,6 @@ export class MusicbrainzTools {
         properties: {
           ...batchStringProperties('mbid', 'MusicBrainz artist ID (UUID, e.g. "a74b1b7f-71a5-4011-9341-f9781536e263").'),
         },
-        required: ['mbid'],
       },
     };
   }

@@ -102,7 +102,6 @@ export class TvmazeTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }

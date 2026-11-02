@@ -190,7 +190,6 @@ export class UsgsTools {
         properties: {
           ...batchStringProperties('event_id', 'USGS event ID (e.g. "nc73649170").'),
         },
-        required: ['event_id'],
       },
     };
   }

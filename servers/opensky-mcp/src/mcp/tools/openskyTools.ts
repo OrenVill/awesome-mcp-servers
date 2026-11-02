@@ -125,7 +125,6 @@ export class OpenSkyTools {
               'Unix timestamp (seconds) for the track snapshot. Defaults to current time if omitted.',
           },
         },
-        required: ['icao24'],
       },
     };
   }

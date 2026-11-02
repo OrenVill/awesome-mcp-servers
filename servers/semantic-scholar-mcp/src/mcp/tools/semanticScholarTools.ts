@@ -116,7 +116,6 @@ export class SemanticScholarTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }

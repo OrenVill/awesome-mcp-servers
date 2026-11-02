@@ -5,7 +5,7 @@ import {
 } from '../types/mcpTypes.js';
 import {
   BATCH_SEPARATOR,
-  batchNumberProperties,
+  batchCoordinateProperties,
   formatInputFieldError,
   resolveCoordinatePairs,
 } from '@awesome-mcp/mcp-schema-helpers';
@@ -66,14 +66,7 @@ export class SunriseSunsetTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          ...batchNumberProperties('lat', 'Latitude in decimal degrees (-90 to 90).', {
-            minimum: -90,
-            maximum: 90,
-          }),
-          ...batchNumberProperties('lng', 'Longitude in decimal degrees (-180 to 180).', {
-            minimum: -180,
-            maximum: 180,
-          }),
+          ...batchCoordinateProperties('lat', 'lng', { lonPlural: 'lngs' }),
           date: {
             type: 'string',
             description:
@@ -81,7 +74,6 @@ export class SunriseSunsetTools {
             pattern: '^\\d{4}-\\d{2}-\\d{2}$',
           },
         },
-        required: ['lat', 'lng'],
       },
     };
   }
@@ -98,10 +90,10 @@ export class SunriseSunsetTools {
     if ('field' in coord) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(coord));
     }
-  const pairs: Array<{ lat: number; lng: number }> = coord.pairs.map((p) => ({
-    lat: p.lat,
-    lng: p.lon,
-  }));
+    const pairs: Array<{ lat: number; lng: number }> = coord.pairs.map((p) => ({
+      lat: p.lat,
+      lng: p.lon,
+    }));
     const isBatch = coord.isBatch;
 
     if (args.date !== undefined) {
@@ -116,7 +108,7 @@ export class SunriseSunsetTools {
       const { lat: latVal, lng: lngVal } = pairs[0]!;
       try {
         const response = await this.service.getSunTimes({ lat: latVal, lng: lngVal, date });
-        const text = this.formatSunTimesAsText(response, latVal, lngVal, date);
+        const text = this.formatSunTimesAsJson(response, latVal, lngVal, date);
         return { content: [{ type: 'text', text }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
@@ -128,7 +120,7 @@ export class SunriseSunsetTools {
       pairs.map(async ({ lat: latVal, lng: lngVal }) => {
         try {
           const response = await this.service.getSunTimes({ lat: latVal, lng: lngVal, date });
-          return this.formatSunTimesAsText(response, latVal, lngVal, date);
+          return this.formatSunTimesAsJson(response, latVal, lngVal, date);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           return `Sun times for ${latVal}, ${lngVal} failed: ${message}`;
@@ -137,6 +129,32 @@ export class SunriseSunsetTools {
     );
 
     return { content: [{ type: 'text', text: sections.join(BATCH_SEPARATOR) }] };
+  }
+
+  private formatSunTimesAsJson(
+    response: SunTimesResponse,
+    lat: number,
+    lng: number,
+    date?: string
+  ): string {
+    const r = response.results;
+    const payload = {
+      location: { lat, lng },
+      date: date ?? 'today (UTC)',
+      timezone: response.tzid ?? null,
+      sunrise: r.sunrise,
+      sunset: r.sunset,
+      solar_noon: r.solar_noon,
+      day_length_seconds: r.day_length,
+      day_length_human: this.formatDayLength(r.day_length),
+      civil_twilight: { begin: r.civil_twilight_begin, end: r.civil_twilight_end },
+      nautical_twilight: { begin: r.nautical_twilight_begin, end: r.nautical_twilight_end },
+      astronomical_twilight: {
+        begin: r.astronomical_twilight_begin,
+        end: r.astronomical_twilight_end,
+      },
+    };
+    return JSON.stringify(payload, null, 2);
   }
 
   private formatSunTimesAsText(

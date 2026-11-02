@@ -24,7 +24,43 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   nameOrCode: 'namesOrCodes',
   event_id: 'event_ids',
   question_id: 'question_ids',
+  country_code: 'country_codes',
+  indicator_id: 'indicator_ids',
+  isbn: 'isbns',
+  issn: 'issns',
+  username: 'usernames',
+  prefix: 'prefixes',
+  mbid: 'mbids',
+  code: 'codes',
+  to: 'tos',
+  key: 'keys',
+  type: 'types',
+  id: 'ids',
+  repo: 'repos',
+  slug: 'slugs',
+  title: 'titles',
+  name: 'names',
+  date: 'dates',
+  pmid: 'pmids',
+  timezone: 'timezones',
+  icao24: 'icao24s',
 };
+
+export interface BatchStringOptions {
+  plural?: string;
+  singularExample?: string;
+  pluralExample?: string[];
+}
+
+export interface BatchNumberOptions {
+  plural?: string;
+  singularExample?: number;
+  pluralExample?: number[];
+}
+
+function omitUndefined<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
 
 export function defaultPlural(singular: string): string {
   if (IRREGULAR_PLURALS[singular]) return IRREGULAR_PLURALS[singular];
@@ -40,20 +76,26 @@ export function defaultPlural(singular: string): string {
 export function batchStringProperties(
   singular: string,
   description: string,
-  plural?: string
+  pluralOrOptions?: string | BatchStringOptions
 ): Record<string, object> {
-  const pluralKey = plural ?? defaultPlural(singular);
+  const options: BatchStringOptions =
+    typeof pluralOrOptions === 'string' ? { plural: pluralOrOptions } : (pluralOrOptions ?? {});
+  const pluralKey = options.plural ?? defaultPlural(singular);
+  const singEx = options.singularExample ?? 'example';
+  const plurEx = options.pluralExample ?? ['example-a', 'example-b'];
   return {
-    [singular]: {
+    [singular]: omitUndefined({
       type: 'string',
-      description: `${description} Use \`${pluralKey}\` instead when you need several values in one call.`,
-    },
-    [pluralKey]: {
+      description: `${description} Single value only — example: "${singEx}". For multiple values use \`${pluralKey}\` instead.`,
+      examples: options.singularExample ? [options.singularExample] : [singEx],
+    }),
+    [pluralKey]: omitUndefined({
       type: 'array',
       items: { type: 'string' },
       minItems: 1,
-      description: `Batch: ${description} Do not set \`${singular}\` when using this field.`,
-    },
+      description: `Batch strings (${pluralKey}): run several ${singular} values in one call. Example: ${JSON.stringify(plurEx)}. Do not set \`${singular}\` when using this field.`,
+      examples: [plurEx],
+    }),
   };
 }
 
@@ -61,25 +103,78 @@ export function batchNumberProperties(
   singular: string,
   description: string,
   range: { minimum: number; maximum: number },
-  plural?: string
+  pluralOrOptions?: string | BatchNumberOptions
 ): Record<string, object> {
-  const pluralKey = plural ?? defaultPlural(singular);
+  const options: BatchNumberOptions =
+    typeof pluralOrOptions === 'string' ? { plural: pluralOrOptions } : (pluralOrOptions ?? {});
+  const pluralKey = options.plural ?? defaultPlural(singular);
+  const singEx = options.singularExample ?? 47.37;
+  const plurEx = options.pluralExample ?? [47.37, 52.52];
   const num = {
     type: 'number',
     minimum: range.minimum,
     maximum: range.maximum,
   };
   return {
-    [singular]: {
+    [singular]: omitUndefined({
       ...num,
-      description: `${description} Use \`${pluralKey}\` for several coordinates in one call (paired with the matching plural longitude/latitude field).`,
-    },
-    [pluralKey]: {
+      description: `${description} Single value — example: ${singEx}. For batch coordinates use \`${pluralKey}\` paired with the other axis plural field.`,
+      examples: [singEx],
+    }),
+    [pluralKey]: omitUndefined({
       type: 'array',
       items: num,
       minItems: 1,
-      description: `Batch: ${description} Must pair positionally with the other coordinate plural field.`,
-    },
+      description: `Batch numbers (${pluralKey}): example ${JSON.stringify(plurEx)}. Must align positionally with the paired plural coordinate field when batching locations.`,
+      examples: [plurEx],
+    }),
+  };
+}
+
+/** Single string parameter with a documented example (agent-friendly, no enum). */
+export function exampleStringProperty(
+  description: string,
+  example: string,
+  options?: { pattern?: string; minLength?: number }
+): object {
+  return omitUndefined({
+    type: 'string',
+    description: `${description} Example: "${example}".`,
+    examples: [example],
+    pattern: options?.pattern,
+    minLength: options?.minLength,
+  });
+}
+
+/** Latitude/longitude (or lat/lon) pair fields with documented batch JSON shape. */
+export function batchCoordinateProperties(
+  latKey: string,
+  lonKey: string,
+  options?: {
+    latPlural?: string;
+    lonPlural?: string;
+    latRange?: { minimum: number; maximum: number };
+    lonRange?: { minimum: number; maximum: number };
+  }
+): Record<string, object> {
+  const latPlural = options?.latPlural ?? defaultPlural(latKey);
+  const lonPlural = options?.lonPlural ?? defaultPlural(lonKey);
+  const latRange = options?.latRange ?? { minimum: -90, maximum: 90 };
+  const lonRange = options?.lonRange ?? { minimum: -180, maximum: 180 };
+  const batchExample = `{ "${latPlural}": [47.37, 52.52], "${lonPlural}": [8.54, 13.41] }`;
+  return {
+    ...batchNumberProperties(
+      latKey,
+      `Latitude (WGS84). Required unless \`city\` is set.`,
+      latRange,
+      { plural: latPlural, singularExample: 47.37, pluralExample: [47.37, 52.52] }
+    ),
+    ...batchNumberProperties(
+      lonKey,
+      `Longitude (WGS84). Required unless \`city\` is set. Batch shape: ${batchExample}.`,
+      lonRange,
+      { plural: lonPlural, singularExample: 8.54, pluralExample: [8.54, 13.41] }
+    ),
   };
 }
 

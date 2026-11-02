@@ -102,7 +102,6 @@ export class PokeapiTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -116,7 +115,6 @@ export class PokeapiTools {
         properties: {
           ...batchStringProperties('name', 'Pokémon name or national dex ID (e.g. "bulbasaur" or "1").'),
         },
-        required: ['name'],
       },
     };
   }
@@ -130,7 +128,6 @@ export class PokeapiTools {
         properties: {
           ...batchStringProperties('type', 'Type name (e.g. "water", "fairy").'),
         },
-        required: ['type'],
       },
     };
   }

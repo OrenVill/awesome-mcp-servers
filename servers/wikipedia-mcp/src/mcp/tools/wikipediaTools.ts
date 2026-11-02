@@ -78,7 +78,6 @@ export class WikipediaTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
@@ -90,7 +89,6 @@ export class WikipediaTools {
         properties: {
           ...batchStringProperties('title', 'Exact Wikipedia article title (e.g. "Albert Einstein").'),
         },
-        required: ['title'],
       },
     };
   }
@@ -102,7 +100,6 @@ export class WikipediaTools {
         properties: {
           ...batchStringProperties('title', 'Exact Wikipedia article title for a brief summary.'),
         },
-        required: ['title'],
       },
     };
   }
