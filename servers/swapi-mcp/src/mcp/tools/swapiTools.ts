@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   SwapiService,
@@ -56,22 +66,7 @@ export interface SearchPeopleInput {
   search: string;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class SwapiTools {
   private service: SwapiService;
@@ -112,7 +107,7 @@ export class SwapiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('SWAPI people id (e.g. "1") or resource URL.'),
+          ...batchStringProperties('id', 'SWAPI people id (e.g. "1") or resource URL.'),
         },
         required: ['id'],
       },
@@ -126,7 +121,7 @@ export class SwapiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('SWAPI planets id (e.g. "1") or resource URL.'),
+          ...batchStringProperties('id', 'SWAPI planets id (e.g. "1") or resource URL.'),
         },
         required: ['id'],
       },
@@ -187,7 +182,11 @@ export class SwapiTools {
   }
 
   async executeGetPerson(args: GetPersonInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id must be a non-empty string or array');
     }
@@ -216,7 +215,11 @@ export class SwapiTools {
   }
 
   async executeGetPlanet(args: GetPlanetInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'id must be a non-empty string or array');
     }

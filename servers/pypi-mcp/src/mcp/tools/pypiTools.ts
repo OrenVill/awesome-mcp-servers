@@ -3,6 +3,15 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   PypiService,
@@ -35,8 +44,6 @@ export interface SearchPackagesInput {
   limit?: number;
 }
 
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 function resolvePackageNames(args: GetPackageInput): string[] {
   const fromNames = args.names?.filter((n) => typeof n === 'string' && n.trim());
   if (fromNames?.length) return fromNames.map((n) => n.trim());
@@ -51,15 +58,6 @@ function resolvePackageNames(args: GetPackageInput): string[] {
   return [];
 }
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
 
 export class PypiTools {
   private service: PypiService;
@@ -84,7 +82,7 @@ export class PypiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          name: stringOrArraySchema('PyPI project name, e.g. "requests".'),
+          ...batchStringProperties('name', 'PyPI project name, e.g. "requests".'),
           names: {
             type: 'array',
             items: { type: 'string' },

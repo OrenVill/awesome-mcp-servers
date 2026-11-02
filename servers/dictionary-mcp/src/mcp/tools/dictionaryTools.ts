@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   DictionaryService,
@@ -45,30 +55,6 @@ export interface GetPhoneticsInput {
   lang?: string;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class DictionaryTools {
   private service: DictionaryService;
 
@@ -89,7 +75,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('The word to look up (e.g. "serendipity").'),
+          ...batchStringProperties('word', 'The word to look up (e.g. "serendipity").'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en"). Examples: en, en_US, es, fr, de, hi, ja, ru.',
@@ -106,7 +92,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('The word to find synonyms for.'),
+          ...batchStringProperties('word', 'The word to find synonyms for.'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en")',
@@ -123,7 +109,7 @@ export class DictionaryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('The word to get phonetics and audio for.'),
+          ...batchStringProperties('word', 'The word to get phonetics and audio for.'),
           lang: {
             type: 'string',
             description: 'Language code (default: "en")',
@@ -136,7 +122,11 @@ export class DictionaryTools {
   }
 
   async executeDefineWord(args: DefineWordInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -167,7 +157,11 @@ export class DictionaryTools {
   }
 
   async executeGetSynonyms(args: GetSynonymsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -198,7 +192,11 @@ export class DictionaryTools {
   }
 
   async executeGetPhonetics(args: GetPhoneticsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

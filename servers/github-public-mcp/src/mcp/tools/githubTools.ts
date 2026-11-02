@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   GithubService,
@@ -76,30 +86,6 @@ export interface SearchReposInput {
   limit?: number;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class GithubTools {
   private service: GithubService;
 
@@ -124,7 +110,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login (user or organization), e.g. "vercel"',
           },
-          repo: stringOrArraySchema('Repository name, e.g. "next.js".'),
+          ...batchStringProperties('repo', 'Repository name, e.g. "next.js".'),
         },
         required: ['owner', 'repo'],
       },
@@ -136,9 +122,7 @@ export class GithubTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          username: stringOrArraySchema(
-            'GitHub username or organization login, e.g. "torvalds".'
-          ),
+          ...batchStringProperties('username', 'GitHub username or organization login, e.g. "torvalds".'),
         },
         required: ['username'],
       },
@@ -154,7 +138,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login',
           },
-          repo: stringOrArraySchema('Repository name.'),
+          ...batchStringProperties('repo', 'Repository name.'),
           state: {
             type: 'string',
             description: 'Filter by issue state',
@@ -183,7 +167,7 @@ export class GithubTools {
             type: 'string',
             description: 'Repository owner login',
           },
-          repo: stringOrArraySchema('Repository name.'),
+          ...batchStringProperties('repo', 'Repository name.'),
           limit: {
             type: 'number',
             description: 'Maximum number of releases to return (1-100)',
@@ -202,9 +186,7 @@ export class GithubTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema(
-            'Search query (supports qualifiers like `language:typescript stars:>1000 topic:cli`).'
-          ),
+          ...batchStringProperties('query', 'Search query (supports qualifiers like `language:typescript stars:>1000 topic:cli`).'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -222,7 +204,11 @@ export class GithubTools {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    const { items, isBatch } = normalizeToArray(args.repo);
+    const repoBatch = normalizeStringArgFromArgs(args, 'repo');
+    if ('field' in repoBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(repoBatch));
+    }
+    const { items, isBatch } = repoBatch;
     if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -249,7 +235,11 @@ export class GithubTools {
   }
 
   async executeGetUser(args: GetUserInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.username);
+    const usernameBatch = normalizeStringArgFromArgs(args, 'username');
+    if ('field' in usernameBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(usernameBatch));
+    }
+    const { items, isBatch } = usernameBatch;
     if (items.length === 0 || items.some((u) => !u || typeof u !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -278,7 +268,11 @@ export class GithubTools {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    const { items, isBatch } = normalizeToArray(args.repo);
+    const repoBatch = normalizeStringArgFromArgs(args, 'repo');
+    if ('field' in repoBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(repoBatch));
+    }
+    const { items, isBatch } = repoBatch;
     if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -318,7 +312,11 @@ export class GithubTools {
     if (!args.owner || typeof args.owner !== 'string') {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'owner is required and must be a string');
     }
-    const { items, isBatch } = normalizeToArray(args.repo);
+    const repoBatch = normalizeStringArgFromArgs(args, 'repo');
+    if ('field' in repoBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(repoBatch));
+    }
+    const { items, isBatch } = repoBatch;
     if (items.length === 0 || items.some((r) => !r || typeof r !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -350,7 +348,11 @@ export class GithubTools {
   }
 
   async executeSearchRepos(args: SearchReposInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

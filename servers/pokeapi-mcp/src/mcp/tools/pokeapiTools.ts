@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   PokeapiService,
@@ -59,22 +69,7 @@ export interface ListPokemonInput {
   offset?: number;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class PokeapiTools {
   private service: PokeapiService;
@@ -98,7 +93,7 @@ export class PokeapiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Name or partial name to search for (e.g. "char" or "pikachu").'),
+          ...batchStringProperties('query', 'Name or partial name to search for (e.g. "char" or "pikachu").'),
           limit: {
             type: 'number',
             description: 'Maximum partial matches to return when no exact hit (1-100)',
@@ -119,7 +114,7 @@ export class PokeapiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          name: stringOrArraySchema('Pokémon name or national dex ID (e.g. "bulbasaur" or "1").'),
+          ...batchStringProperties('name', 'Pokémon name or national dex ID (e.g. "bulbasaur" or "1").'),
         },
         required: ['name'],
       },
@@ -133,7 +128,7 @@ export class PokeapiTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          type: stringOrArraySchema('Type name (e.g. "water", "fairy").'),
+          ...batchStringProperties('type', 'Type name (e.g. "water", "fairy").'),
         },
         required: ['type'],
       },
@@ -166,7 +161,11 @@ export class PokeapiTools {
   }
 
   async executeSearchPokemon(args: SearchPokemonInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -201,7 +200,11 @@ export class PokeapiTools {
   }
 
   async executeGetPokemon(args: GetPokemonInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.name);
+    const nameBatch = normalizeStringArgFromArgs(args, 'name');
+    if ('field' in nameBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(nameBatch));
+    }
+    const { items, isBatch } = nameBatch;
     if (items.length === 0 || items.some((n) => !n || typeof n !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -228,7 +231,11 @@ export class PokeapiTools {
   }
 
   async executeGetType(args: GetTypeInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.type);
+    const typeBatch = normalizeStringArgFromArgs(args, 'type');
+    if ('field' in typeBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(typeBatch));
+    }
+    const { items, isBatch } = typeBatch;
     if (items.length === 0 || items.some((t) => !t || typeof t !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

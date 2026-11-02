@@ -3,6 +3,15 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   WorldbankService,
@@ -81,22 +90,7 @@ export interface GetCountryIndicatorInput {
 
 const DATE_RE = /^(\d{4})(?::(\d{4}))?$/;
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 function formatCountryLine(c: WBCountry): string {
   const region = c.region?.value?.trim() ?? '';
@@ -248,7 +242,7 @@ export class WorldbankTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Search terms matched against indicator id and name.'),
+          ...batchStringProperties('query', 'Search terms matched against indicator id and name.'),
           limit: {
             type: 'integer',
             minimum: 1,
@@ -273,12 +267,8 @@ export class WorldbankTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          country_code: stringOrArraySchema(
-            'World Bank country id or ISO2 code (e.g. us, USA, IND).'
-          ),
-          indicator_id: stringOrArraySchema(
-            'Indicator id (e.g. SP.POP.TOTL, NY.GDP.MKTP.CD).'
-          ),
+          ...batchStringProperties('country_code', 'World Bank country id or ISO2 code (e.g. us, USA, IND).'),
+          ...batchStringProperties('indicator_id', 'Indicator id (e.g. SP.POP.TOTL, NY.GDP.MKTP.CD).'),
           date: {
             type: 'string',
             description:

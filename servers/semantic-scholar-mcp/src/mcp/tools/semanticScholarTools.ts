@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   SemanticScholarService,
@@ -72,22 +82,7 @@ export interface GetPaperCitationsInput {
   limit?: number;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class SemanticScholarTools {
   private service: SemanticScholarService;
@@ -112,7 +107,7 @@ export class SemanticScholarTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text search query.'),
+          ...batchStringProperties('query', 'Free-text search query.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results per query (1-100)',
@@ -138,9 +133,7 @@ export class SemanticScholarTools {
             description:
               'Single paper ID (Semantic Scholar hash or prefixed external ID such as DOI:10.1038/...).',
           },
-          ids: stringOrArraySchema(
-            'One or more paper IDs for batch lookup (same ID formats as paperId).'
-          ),
+          ...batchStringProperties('ids', 'One or more paper IDs for batch lookup (same ID formats as paperId).'),
         },
       },
     };
@@ -172,7 +165,11 @@ export class SemanticScholarTools {
   }
 
   async executeSearchPapers(args: SearchPapersInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -283,7 +280,11 @@ export class SemanticScholarTools {
     | { ok: true; ids: string[]; isBatch: boolean }
     | { ok: false; error: string } {
     if (args.ids !== undefined) {
-      const { items, isBatch } = normalizeToArray(args.ids);
+      const idsBatch = normalizeStringArgFromArgs(args, 'ids');
+      if ('field' in idsBatch) {
+        return { ok: false, error: formatInputFieldError(idsBatch) };
+      }
+      const { items, isBatch } = idsBatch;
       if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
         return {
           ok: false,

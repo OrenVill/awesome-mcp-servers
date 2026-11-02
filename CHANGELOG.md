@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+- **@awesome-mcp/mcp-schema-helpers** — shared batch input JSON Schema helpers (explicit singular + plural fields instead of `oneOf`) and field-aware validation errors for MCP tools.
+
+### Changed
+
+- **Agent readiness** — tool `inputSchema` batch parameters use explicit singular/plural fields (e.g. `word` / `words`, `latitude` / `latitudes`) instead of ambiguous `oneOf` string-or-array schemas; validation errors name the field and suggest a next step.
+- **get_current_weather** — returns stable JSON (location, observed conditions, temperature, wind, precipitation) instead of markdown-only text.
+- **execute_tools** (unified-mcp) — documents the expected `tools` array shape with a concrete JSON example.
+
+### Added
+
 - **unified-mcp** — lazy provider loading: build-time `tool-catalog.json`, dynamic `import()` per API on first tool use; `UNIFIED_MCP_PROVIDERS` / `UNIFIED_MCP_EXCLUDE` / `UNIFIED_MCP_EAGER_LOAD`; optional `UNIFIED_MCP_MAX_LOADED_PROVIDERS` LRU eviction; `/health` reports catalog vs loaded providers.
 - **unified-mcp** — `requiredProcessEnv` provider gating: credential-backed providers (e.g. CareClinic) appear in `search_tools` / `execute_tools` only when the MCP process has the required env var (typically the client `env` block).
 - **careclinic-mcp** (port 3516) — proxy to official CareClinic remote MCP; each user supplies `CARECLINIC_BEARER_TOKEN`; optional in unified-mcp when that env is set.

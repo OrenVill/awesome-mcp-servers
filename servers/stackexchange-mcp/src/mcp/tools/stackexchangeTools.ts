@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   StackExchangeService,
@@ -63,32 +73,8 @@ export interface SearchTagsInput {
   site?: string;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array for batch requests.`,
-  };
-}
 
-function numberOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'number' },
-      { type: 'array', items: { type: 'number' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single ID or an array of IDs.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class StackExchangeTools {
   private service: StackExchangeService;
@@ -113,7 +99,7 @@ export class StackExchangeTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Search terms (supports Stack Exchange search syntax).'),
+          ...batchStringProperties('query', 'Search terms (supports Stack Exchange search syntax).'),
           site: {
             type: 'string',
             description:
@@ -139,8 +125,19 @@ export class StackExchangeTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          question_id: numberOrArraySchema('Question ID on the site.'),
-          ids: numberOrArraySchema('Alias for question_id — one ID or many.'),
+          ...batchNumberProperties(
+            'question_id',
+            'Question ID on the site.',
+            { minimum: 1, maximum: 99999999999 },
+            'question_ids'
+          ),
+          ids: {
+            type: 'array',
+            items: { type: 'number', minimum: 1 },
+            minItems: 1,
+            description:
+              'Optional alias for `question_ids` when fetching multiple questions. Do not combine with `question_id`.',
+          },
           site: {
             type: 'string',
             description:
@@ -174,7 +171,11 @@ export class StackExchangeTools {
   }
 
   async executeSearchQuestions(args: SearchQuestionsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

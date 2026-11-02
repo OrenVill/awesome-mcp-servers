@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   NpmRegistryService,
@@ -35,22 +45,7 @@ export interface SearchPackagesInput {
   size?: number;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class NpmRegistryTools {
   private service: NpmRegistryService;
@@ -74,9 +69,7 @@ export class NpmRegistryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          name: stringOrArraySchema(
-            'npm package name, e.g. "lodash" or "@types/node".'
-          ),
+          ...batchStringProperties('name', 'npm package name, e.g. "lodash" or "@types/node".'),
         },
         required: ['name'],
       },
@@ -238,7 +231,11 @@ export class NpmRegistryTools {
   }
 
   async executeGetPackage(args: GetPackageInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.name);
+    const nameBatch = normalizeStringArgFromArgs(args, 'name');
+    if ('field' in nameBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(nameBatch));
+    }
+    const { items, isBatch } = nameBatch;
     if (items.length === 0 || items.some((n) => !n || typeof n !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

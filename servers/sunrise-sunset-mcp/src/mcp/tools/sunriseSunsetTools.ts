@@ -3,6 +3,15 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  resolveCoordinatePairs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   SunriseSunsetService,
@@ -35,26 +44,8 @@ export interface GetSunTimesInput {
 }
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function numberOrArraySchema(description: string, range: { minimum: number; maximum: number }): object {
-  return {
-    oneOf: [
-      { type: 'number', minimum: range.minimum, maximum: range.maximum },
-      {
-        type: 'array',
-        items: { type: 'number', minimum: range.minimum, maximum: range.maximum },
-        minItems: 1,
-      },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
 
 export class SunriseSunsetTools {
   private service: SunriseSunsetService;
@@ -78,11 +69,11 @@ export class SunriseSunsetTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          lat: numberOrArraySchema('Latitude in decimal degrees (-90 to 90).', {
+          ...batchNumberProperties('lat', 'Latitude in decimal degrees (-90 to 90).', {
             minimum: -90,
             maximum: 90,
           }),
-          lng: numberOrArraySchema('Longitude in decimal degrees (-180 to 180).', {
+          ...batchNumberProperties('lng', 'Longitude in decimal degrees (-180 to 180).', {
             minimum: -180,
             maximum: 180,
           }),
@@ -99,36 +90,19 @@ export class SunriseSunsetTools {
   }
 
   async executeGetSunTimes(args: GetSunTimesInput): Promise<MCPToolCallResult> {
-    const lat = normalizeToArray(args.lat);
-    const lng = normalizeToArray(args.lng);
-    const isBatch = lat.isBatch || lng.isBatch;
-
-    if (lat.items.length !== lng.items.length) {
-      return createMCPErrorResult(
-        MCPErrorCode.INVALID_INPUT,
-        `lat and lng must have the same number of values when batching (got ${lat.items.length} lat and ${lng.items.length} lng)`
-      );
+    const coord = resolveCoordinatePairs(
+      args,
+      'lat',
+      'lng',
+      { minimum: -90, maximum: 90 },
+      { minimum: -180, maximum: 180 },
+      'lngs'
+    );
+    if ('field' in coord) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(coord));
     }
-
-    const pairs = lat.items.map((latVal, i) => ({ lat: latVal, lng: lng.items[i]! }));
-    if (pairs.length === 0) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat and lng are required');
-    }
-
-    for (const { lat: latVal, lng: lngVal } of pairs) {
-      if (typeof latVal !== 'number' || Number.isNaN(latVal) || latVal < -90 || latVal > 90) {
-        return createMCPErrorResult(
-          MCPErrorCode.INVALID_INPUT,
-          'lat is required and must be a number between -90 and 90'
-        );
-      }
-      if (typeof lngVal !== 'number' || Number.isNaN(lngVal) || lngVal < -180 || lngVal > 180) {
-        return createMCPErrorResult(
-          MCPErrorCode.INVALID_INPUT,
-          'lng is required and must be a number between -180 and 180'
-        );
-      }
-    }
+    const pairs = coord.pairs.map((p) => ({ lat: p.lat, lng: p.lon }));
+    const isBatch = coord.isBatch;
 
     if (args.date !== undefined) {
       if (typeof args.date !== 'string' || !ISO_DATE_RE.test(args.date)) {

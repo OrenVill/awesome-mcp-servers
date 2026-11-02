@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   WikidataService,
@@ -47,22 +57,8 @@ export interface GetEntityDescriptionInput {
   language?: string;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single Q-id or an array of Q-ids for batch requests.`,
-  };
-}
 
-const BATCH_SEPARATOR = '\n\n---\n\n';
 const ENTITY_ID_PATTERN = /^Q\d+$/i;
 
 function isValidEntityId(id: string): boolean {
@@ -122,7 +118,7 @@ export class WikidataTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('Wikidata entity id (e.g. Q937).'),
+          ...batchStringProperties('id', 'Wikidata entity id (e.g. Q937).'),
           language: {
             type: 'string',
             description: 'Preferred language for primary label and description.',
@@ -141,7 +137,7 @@ export class WikidataTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('Wikidata entity id (e.g. Q937).'),
+          ...batchStringProperties('id', 'Wikidata entity id (e.g. Q937).'),
           language: {
             type: 'string',
             description: 'Language code for the description.',
@@ -180,7 +176,11 @@ export class WikidataTools {
   }
 
   async executeGetEntity(args: GetEntityInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -236,7 +236,11 @@ export class WikidataTools {
   async executeGetEntityDescription(
     args: GetEntityDescriptionInput
   ): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

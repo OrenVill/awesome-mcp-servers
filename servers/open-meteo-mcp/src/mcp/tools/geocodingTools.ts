@@ -4,6 +4,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
 
@@ -20,30 +30,6 @@ export interface SearchLocationsInput {
   language?: string;
   countryCode?: string;
 }
-
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class GeocodingTools {
   private service: OpenMeteoService;
@@ -66,7 +52,7 @@ export class GeocodingTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          name: stringOrArraySchema('Location name or postal code to search for (min 2 characters).'),
+          ...batchStringProperties('name', 'Location name or postal code to search for (min 2 characters).'),
           count: {
             type: 'number',
             description: 'Number of results to return (1-100)',
@@ -91,7 +77,11 @@ export class GeocodingTools {
   }
 
   async executeSearchLocations(args: SearchLocationsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.name);
+    const nameBatch = normalizeStringArgFromArgs(args, 'name');
+    if ('field' in nameBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(nameBatch));
+    }
+    const { items, isBatch } = nameBatch;
     if (items.length === 0 || items.some((n) => !n || typeof n !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

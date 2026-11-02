@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { RestCountriesService } from '../../services/restCountriesService.js';
 import type { Country } from '../../services/restCountriesService.js';
@@ -52,30 +62,6 @@ export interface ListAllCountriesInput {
   fields?: string;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class CountriesTools {
   private service: RestCountriesService;
 
@@ -98,9 +84,7 @@ export class CountriesTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          nameOrCode: stringOrArraySchema(
-            'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").'
-          ),
+          ...batchStringProperties('nameOrCode', 'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").'),
         },
         required: ['nameOrCode'],
       },
@@ -119,9 +103,7 @@ export class CountriesTools {
             enum: ['region', 'subregion', 'capital'],
             description: 'Type of search: region (e.g. Europe, Americas), subregion (e.g. South America), or capital city',
           },
-          query: stringOrArraySchema(
-            'Search value (e.g. "Europe", "South America", "Paris").'
-          ),
+          ...batchStringProperties('query', 'Search value (e.g. "Europe", "South America", "Paris").'),
         },
         required: ['searchType', 'query'],
       },
@@ -148,7 +130,11 @@ export class CountriesTools {
   }
 
   async executeGetCountry(args: GetCountryInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.nameOrCode);
+    const nameOrCodeBatch = normalizeStringArgFromArgs(args, 'nameOrCode');
+    if ('field' in nameOrCodeBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(nameOrCodeBatch));
+    }
+    const { items, isBatch } = nameOrCodeBatch;
     if (items.length === 0 || items.some((v) => !v || typeof v !== 'string' || !v.trim())) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -198,7 +184,11 @@ export class CountriesTools {
       );
     }
 
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((v) => !v || typeof v !== 'string' || !v.trim())) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   CrossrefService,
@@ -56,30 +66,6 @@ export interface GetJournalInput {
   issn: string | string[];
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class CrossrefTools {
   private service: CrossrefService;
 
@@ -101,7 +87,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          doi: stringOrArraySchema('DOI of the work to look up (e.g. "10.1038/nphys1170").'),
+          ...batchStringProperties('doi', 'DOI of the work to look up (e.g. "10.1038/nphys1170").'),
         },
         required: ['doi'],
       },
@@ -113,7 +99,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text query to search Crossref works.'),
+          ...batchStringProperties('query', 'Free-text query to search Crossref works.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -137,7 +123,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Query to search journals by title or keywords.'),
+          ...batchStringProperties('query', 'Query to search journals by title or keywords.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -156,7 +142,7 @@ export class CrossrefTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          issn: stringOrArraySchema('ISSN of the journal (e.g. "2167-8359").'),
+          ...batchStringProperties('issn', 'ISSN of the journal (e.g. "2167-8359").'),
         },
         required: ['issn'],
       },
@@ -164,7 +150,11 @@ export class CrossrefTools {
   }
 
   async executeGetWork(args: GetWorkInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.doi);
+    const doiBatch = normalizeStringArgFromArgs(args, 'doi');
+    if ('field' in doiBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(doiBatch));
+    }
+    const { items, isBatch } = doiBatch;
     if (items.length === 0 || items.some((d) => !d || typeof d !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -191,7 +181,11 @@ export class CrossrefTools {
   }
 
   async executeSearchWorks(args: SearchWorksInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -227,7 +221,11 @@ export class CrossrefTools {
   }
 
   async executeSearchJournals(args: SearchJournalsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -259,7 +257,11 @@ export class CrossrefTools {
   }
 
   async executeGetJournal(args: GetJournalInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.issn);
+    const issnBatch = normalizeStringArgFromArgs(args, 'issn');
+    if ('field' in issnBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(issnBatch));
+    }
+    const { items, isBatch } = issnBatch;
     if (items.length === 0 || items.some((i) => !i || typeof i !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

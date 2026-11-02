@@ -3,6 +3,15 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   OpenSkyService,
@@ -66,19 +75,6 @@ function normalizeIcao24List(
   return { ok: true, ids: cleaned };
 }
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string', pattern: '^[0-9a-fA-F]{6}$' },
-      {
-        type: 'array',
-        items: { type: 'string', pattern: '^[0-9a-fA-F]{6}$' },
-        minItems: 1,
-      },
-    ],
-    description: `${description} Accepts a single ICAO24 hex address or an array of addresses.`,
-  };
-}
 
 const DEFAULT_ARRIVAL_WINDOW_SEC = 2 * 60 * 60;
 const MAX_ARRIVAL_WINDOW_SEC = 2 * 24 * 60 * 60;
@@ -105,9 +101,7 @@ export class OpenSkyTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          icao24: stringOrArraySchema(
-            'Optional ICAO24 transponder address filter (6 hex chars, e.g. "3c6444").'
-          ),
+          ...batchStringProperties('icao24', 'Optional ICAO24 transponder address filter (6 hex chars, e.g. "3c6444").'),
         },
       },
     };
