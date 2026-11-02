@@ -110,6 +110,7 @@ export class GithubTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: ownerRepoBatchExamples(),
         properties: {
@@ -132,6 +133,7 @@ export class GithubTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('username', defaultStringBatchOptions('username')),
         properties: {
@@ -145,6 +147,7 @@ export class GithubTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: ownerRepoBatchExamples(),
         properties: {
@@ -180,6 +183,7 @@ export class GithubTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: ownerRepoBatchExamples(),
         properties: {
@@ -209,6 +213,7 @@ export class GithubTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {

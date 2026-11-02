@@ -78,6 +78,7 @@ export class DictionaryTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
@@ -96,6 +97,7 @@ export class DictionaryTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
@@ -114,6 +116,7 @@ export class DictionaryTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {

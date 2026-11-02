@@ -78,6 +78,7 @@ export class NominatimTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -102,6 +103,7 @@ export class NominatimTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: coordinateBatchInputExamples('lat', 'lon'),
         properties: {
@@ -122,6 +124,7 @@ export class NominatimTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           osm_ids: {
             type: 'string',

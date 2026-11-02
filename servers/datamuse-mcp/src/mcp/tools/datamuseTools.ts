@@ -95,6 +95,7 @@ export class DatamuseTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
@@ -115,6 +116,7 @@ export class DatamuseTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
@@ -135,6 +137,7 @@ export class DatamuseTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -155,6 +158,7 @@ export class DatamuseTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
@@ -175,6 +179,7 @@ export class DatamuseTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('prefix', defaultStringBatchOptions('prefix')),
         properties: {

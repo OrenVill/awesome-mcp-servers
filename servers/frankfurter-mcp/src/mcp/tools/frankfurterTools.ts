@@ -109,6 +109,7 @@ export class FrankfurterTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           base: {
             type: 'string',
@@ -130,6 +131,7 @@ export class FrankfurterTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('to', defaultStringBatchOptions('to')),
         properties: {
@@ -155,6 +157,7 @@ export class FrankfurterTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('date', defaultStringBatchOptions('date')),
         properties: {
@@ -178,6 +181,7 @@ export class FrankfurterTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           start_date: {
             type: 'string',
@@ -209,6 +213,7 @@ export class FrankfurterTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };

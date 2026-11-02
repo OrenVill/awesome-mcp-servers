@@ -80,6 +80,7 @@ export class MdnTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -105,6 +106,7 @@ export class MdnTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('slug', defaultStringBatchOptions('slug')),
         properties: {
@@ -123,6 +125,7 @@ export class MdnTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('slug', defaultStringBatchOptions('slug')),
         properties: {

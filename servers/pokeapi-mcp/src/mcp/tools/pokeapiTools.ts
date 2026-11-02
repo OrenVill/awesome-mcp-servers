@@ -97,6 +97,7 @@ export class PokeapiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -119,6 +120,7 @@ export class PokeapiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('name', defaultStringBatchOptions('name')),
         properties: {
@@ -134,6 +136,7 @@ export class PokeapiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('type', defaultStringBatchOptions('type')),
         properties: {
@@ -149,6 +152,7 @@ export class PokeapiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           limit: {
             type: 'number',

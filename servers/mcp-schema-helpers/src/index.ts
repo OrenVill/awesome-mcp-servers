@@ -16,6 +16,7 @@ export interface AgentReadyObjectInputSchema {
   required?: string[];
   description?: string;
   examples?: Record<string, unknown>[];
+  additionalProperties?: boolean;
 }
 
 export function formatInputFieldError(err: InputFieldError): string {
@@ -95,15 +96,8 @@ export function batchStringProperties(
   return {
     [singular]: omitUndefined({
       type: 'string',
-      description: `${description} Single value only — example: "${singEx}". For multiple values use \`${pluralKey}\` instead.`,
+      description: `${description} Single value — example: "${singEx}". For batch, send \`${pluralKey}\` as a string array in the same request object (see inputSchema \`examples\`, e.g. ${JSON.stringify({ [pluralKey]: plurEx })}).`,
       examples: options.singularExample ? [options.singularExample] : [singEx],
-    }),
-    [pluralKey]: omitUndefined({
-      type: 'array',
-      items: { type: 'string' },
-      minItems: 1,
-      description: `Batch strings (${pluralKey}): run several ${singular} values in one call. Use alone (do not set \`${singular}\`). Full request JSON examples are on the tool inputSchema \`examples\` array; batch-only shape: ${JSON.stringify({ [pluralKey]: plurEx })}.`,
-      examples: [plurEx],
     }),
   };
 }
@@ -127,15 +121,8 @@ export function batchNumberProperties(
   return {
     [singular]: omitUndefined({
       ...num,
-      description: `${description} Single value — example: ${singEx}. For batch coordinates use \`${pluralKey}\` paired with the other axis plural field.`,
+      description: `${description} Single value — example: ${singEx}. For batch coordinates send paired \`${pluralKey}\` number arrays (see inputSchema \`examples\`; plural fields omitted from properties for a shallow schema).`,
       examples: [singEx],
-    }),
-    [pluralKey]: omitUndefined({
-      type: 'array',
-      items: num,
-      minItems: 1,
-      description: `Batch numbers (${pluralKey}): paired with the other axis plural field (same length). Full request JSON examples are on the tool inputSchema \`examples\` array; batch-only shape example: ${JSON.stringify({ [pluralKey]: plurEx })}.`,
-      examples: [plurEx],
     }),
   };
 }
@@ -144,12 +131,13 @@ export function batchNumberProperties(
 export function exampleStringProperty(
   description: string,
   example: string,
-  options?: { pattern?: string; minLength?: number }
+  options?: { pattern?: string; minLength?: number; default?: string }
 ): object {
   return omitUndefined({
     type: 'string',
     description: `${description} Example: "${example}".`,
     examples: [example],
+    default: options?.default ?? example,
     pattern: options?.pattern,
     minLength: options?.minLength,
   });
@@ -371,6 +359,25 @@ export function buildAgentReadyExamples(block: {
       })
     : [];
   return [...stringExamples, ...numberExamples, ...coordExamples];
+}
+
+/** Wrap properties with agent-readiness metadata (examples + allow batch-only plural keys). */
+export function agentReadyInputSchema(
+  properties: Record<string, object>,
+  config: {
+    description?: string;
+    examples: Record<string, unknown>[];
+    required?: string[];
+  }
+): AgentReadyObjectInputSchema {
+  return {
+    type: 'object',
+    additionalProperties: true,
+    description: config.description ?? AGENT_READY_BATCH_DESCRIPTION,
+    examples: config.examples,
+    properties,
+    ...(config.required?.length ? { required: config.required } : {}),
+  };
 }
 
 export function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {

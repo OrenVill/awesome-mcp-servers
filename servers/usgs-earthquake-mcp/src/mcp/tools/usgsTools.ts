@@ -104,6 +104,7 @@ export class UsgsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           start_time: {
             type: 'string',
@@ -160,6 +161,7 @@ export class UsgsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           min_magnitude: {
             type: 'number',
@@ -191,6 +193,7 @@ export class UsgsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('event_id', defaultStringBatchOptions('event_id')),
         properties: {

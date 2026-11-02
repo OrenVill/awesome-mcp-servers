@@ -81,18 +81,11 @@ export class CountriesTools {
     }
   }
 
-  static getGetCountrySchema(): {
-    inputSchema: {
-      type: 'object';
-      properties: object;
-      required?: string[];
-      description?: string;
-      examples?: Record<string, unknown>[];
-    };
-  } {
+  static getGetCountrySchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description:
           'Use `nameOrCode` for one country or `namesOrCodes` for batch. Full JSON shapes are in `examples`.',
         examples: stringBatchInputExamples('nameOrCode', {
@@ -115,6 +108,7 @@ export class CountriesTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -136,6 +130,7 @@ export class CountriesTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           fields: {
             type: 'string',

@@ -35,64 +35,53 @@ const SEARCH_TOOLS_DEF: Tool = {
 const EXECUTE_TOOLS_DEF: Tool = {
   name: 'execute_tools',
   description:
-    '⚡ Execute one or more bundled tools in a single call. Tools run in parallel; each result is returned in the same order with the tool name and either its content or an error message. Use search_tools first to discover tool names and argument schemas. Request shape: { "tools": [ { "name": "<tool>", "arguments": { ... } } ] } — see inputSchema.examples.',
+    '⚡ Execute one or more bundled tools in a single call. Tools run in parallel; each result is returned in the same order with the tool name and either its content or an error message. Use search_tools first to discover tool names and argument schemas. Prefer `tools_json` (see inputSchema.examples); legacy `tools` array is still accepted at runtime.',
   inputSchema: {
     type: 'object',
+    additionalProperties: true,
     description:
-      'Object with a `tools` array. Each element: { "name": string, "arguments"?: object }. Copy-paste full requests from `examples`.',
+      'Shallow schema: set `tools_json` to a JSON array of { name, arguments? }. Example payloads are in `examples`.',
     examples: [
       {
-        tools: [{ name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } }],
+        tools_json:
+          '[{"name":"get_current_weather","arguments":{"latitude":47.37,"longitude":8.54}}]',
       },
       {
-        tools: [
-          { name: 'get_country', arguments: { nameOrCode: 'France' } },
-          { name: 'search_wikipedia', arguments: { queries: ['Zurich', 'Bern'] } },
-        ],
+        tools_json:
+          '[{"name":"get_country","arguments":{"nameOrCode":"France"}},{"name":"search_wikipedia","arguments":{"query":"Zurich"}}]',
       },
     ],
     properties: {
-      tools: {
-        type: 'array',
+      tools_json: {
+        type: 'string',
+        minLength: 2,
         description:
-          'Tools to run in parallel. One element shape: { "name": "get_current_weather", "arguments": { "latitude": 47.37, "longitude": 8.54 } }. Full multi-tool requests are in inputSchema.examples.',
-        minItems: 1,
-        items: {
-          type: 'object',
-          description: 'Single tool call.',
-          additionalProperties: false,
-          properties: {
-            name: {
-              type: 'string',
-              description: 'Tool name from search_tools (e.g. get_current_weather).',
-              examples: ['get_current_weather', 'search_wikipedia', 'get_country'],
-            },
-            arguments: {
-              type: 'object',
-              description:
-                'Arguments for that tool (omit or {} if none). Example for weather: { "latitude": 47.37, "longitude": 8.54 }.',
-              examples: [
-                { latitude: 47.37, longitude: 8.54 },
-                { nameOrCode: 'France' },
-                { queries: ['Zurich'] },
-              ],
-            },
-          },
-          required: ['name'],
-          examples: [
-            { name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } },
-          ],
-        },
+          'JSON array of tool calls, each { "name": string, "arguments"?: object }. Copy from inputSchema.examples.',
         examples: [
-          [{ name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } }],
+          '[{"name":"get_current_weather","arguments":{"latitude":47.37,"longitude":8.54}}]',
         ],
       },
     },
-    required: ['tools'],
+    required: ['tools_json'],
   },
 };
 
-type ExecuteToolsCall = { name: string; arguments?: Record<string, unknown> };
+function parseExecuteToolsCalls(args: Record<string, unknown>): ExecuteToolsCall[] {
+  if (Array.isArray(args.tools)) {
+    return args.tools as ExecuteToolsCall[];
+  }
+  const raw = args.tools_json;
+  if (typeof raw === 'string' && raw.trim()) {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      throw new Error('tools_json must be a non-empty JSON array');
+    }
+    return parsed as ExecuteToolsCall[];
+  }
+  throw new Error('execute_tools requires `tools_json` (JSON string) or legacy `tools` array');
+}
+
+type ExecuteToolsCall = { name: string; arguments?: Record<string, unknown> | string };
 
 function log(server: string, event: string, data?: Record<string, unknown>): void {
   const prefix = `[${server}]`;
@@ -211,17 +200,27 @@ export class MCPServer {
         }
 
         if (name === 'execute_tools') {
-          const calls = Array.isArray(safeArgs.tools)
-            ? (safeArgs.tools as ExecuteToolsCall[])
-            : [];
+          let calls: ExecuteToolsCall[];
+          try {
+            calls = parseExecuteToolsCalls(safeArgs);
+          } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            throw new Error(message);
+          }
           if (calls.length === 0) {
-            throw new Error('execute_tools requires a non-empty `tools` array');
+            throw new Error('execute_tools requires a non-empty tool call list');
           }
 
           const settled = await Promise.all(
             calls.map(async (call) => {
               const toolName = String(call?.name ?? '');
-              const toolArgs = (call?.arguments ?? {}) as Record<string, unknown>;
+              let toolArgs: Record<string, unknown> = {};
+              const rawArgs = call?.arguments;
+              if (typeof rawArgs === 'string' && rawArgs.trim()) {
+                toolArgs = JSON.parse(rawArgs) as Record<string, unknown>;
+              } else if (rawArgs && typeof rawArgs === 'object' && !Array.isArray(rawArgs)) {
+                toolArgs = rawArgs as Record<string, unknown>;
+              }
               if (!this.registry.hasTool(toolName)) {
                 return { name: toolName, ok: false, error: `Unknown tool: ${toolName}` };
               }

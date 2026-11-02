@@ -110,6 +110,7 @@ export class SemanticScholarTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -132,6 +133,7 @@ export class SemanticScholarTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('ids', defaultStringBatchOptions('ids')),
         properties: {
@@ -152,6 +154,7 @@ export class SemanticScholarTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           paperId: {
             type: 'string',

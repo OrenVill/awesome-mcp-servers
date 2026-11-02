@@ -92,6 +92,7 @@ export class WikidataTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           search: {
             type: 'string',
@@ -121,6 +122,7 @@ export class WikidataTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
@@ -141,6 +143,7 @@ export class WikidataTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {

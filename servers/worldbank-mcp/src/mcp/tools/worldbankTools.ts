@@ -250,6 +250,7 @@ export class WorldbankTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           page: {
             type: 'integer',
@@ -283,6 +284,7 @@ export class WorldbankTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -309,6 +311,7 @@ export class WorldbankTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: dualStringBatchInputExamples('country_code', 'indicator_id', defaultStringBatchOptions('country_code'), defaultStringBatchOptions('indicator_id')),
         properties: {

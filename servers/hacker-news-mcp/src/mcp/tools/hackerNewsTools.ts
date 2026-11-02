@@ -95,6 +95,7 @@ export class HackerNewsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           count: {
             type: 'number',
@@ -121,6 +122,7 @@ export class HackerNewsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: numberBatchInputExamples('id', defaultNumberBatchRange('id'), defaultNumberBatchOptions('id')),
         properties: {
@@ -141,6 +143,7 @@ export class HackerNewsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: numberBatchInputExamples('storyId', defaultNumberBatchRange('storyId'), defaultNumberBatchOptions('storyId')),
         properties: {
@@ -176,6 +179,7 @@ export class HackerNewsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {

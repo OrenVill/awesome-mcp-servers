@@ -1,3 +1,4 @@
+import type { AgentReadyObjectInputSchema } from '@awesome-mcp/mcp-schema-helpers';
 import {
   MCPToolCallResult,
   createMCPErrorResult,
@@ -77,11 +78,12 @@ export class OpenFdaTools {
   }
 
   static getSearchSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           search: {
             type: 'string',

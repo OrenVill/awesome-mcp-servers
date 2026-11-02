@@ -105,6 +105,7 @@ export class StackExchangeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -132,6 +133,7 @@ export class StackExchangeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: numberBatchInputExamples('question_id', defaultNumberBatchRange('question_id'), defaultNumberBatchOptions('question_id')),
         properties: {
@@ -161,6 +163,7 @@ export class StackExchangeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           inname: {
             type: 'string',

@@ -104,6 +104,7 @@ export class OpenSkyTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('icao24', defaultStringBatchOptions('icao24')),
         properties: {
@@ -119,6 +120,7 @@ export class OpenSkyTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           icao24: {
             type: 'string',
@@ -141,6 +143,7 @@ export class OpenSkyTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           airport: {
             type: 'string',

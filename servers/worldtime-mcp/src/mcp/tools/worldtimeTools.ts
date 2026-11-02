@@ -118,6 +118,7 @@ export class WorldtimeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: mergeInputExamples(
           stringBatchInputExamples('timezone', defaultStringBatchOptions('timezone')),
@@ -125,14 +126,6 @@ export class WorldtimeTools {
         ),
         properties: {
           ...batchStringProperties('timezone', 'IANA timezone identifier (e.g. "Europe/London").'),
-          timezones: {
-            type: 'array',
-            items: { type: 'string' },
-            minItems: 1,
-            description:
-              'Batch lookup: array of IANA timezone identifiers. Full JSON in inputSchema.examples; batch-only: { "timezones": ["Europe/Zurich"] }.',
-            examples: [['Europe/Zurich', 'America/New_York']],
-          },
         },
       },
     };
@@ -144,6 +137,7 @@ export class WorldtimeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           ip: {
             type: 'string',
@@ -161,6 +155,7 @@ export class WorldtimeTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };

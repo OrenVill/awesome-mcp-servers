@@ -98,6 +98,7 @@ export class MusicbrainzTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           query: {
             type: 'string',
@@ -129,6 +130,7 @@ export class MusicbrainzTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           query: {
             type: 'string',
@@ -160,6 +162,7 @@ export class MusicbrainzTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('mbid', defaultStringBatchOptions('mbid')),
         properties: {

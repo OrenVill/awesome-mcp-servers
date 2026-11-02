@@ -72,6 +72,7 @@ export class NpmRegistryTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('name', defaultStringBatchOptions('name')),
         properties: {
@@ -87,6 +88,7 @@ export class NpmRegistryTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           text: {
             type: 'string',

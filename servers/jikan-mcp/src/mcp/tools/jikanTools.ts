@@ -110,6 +110,7 @@ export class JikanTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
@@ -138,6 +139,7 @@ export class JikanTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           mal_id: {
             type: 'integer',
@@ -156,6 +158,7 @@ export class JikanTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           filter: {
             type: 'string',

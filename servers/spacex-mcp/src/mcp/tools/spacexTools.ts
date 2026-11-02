@@ -103,6 +103,7 @@ export class SpacexTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };
@@ -112,6 +113,7 @@ export class SpacexTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };
@@ -121,6 +123,7 @@ export class SpacexTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           upcoming: {
             type: 'boolean',
@@ -152,6 +155,7 @@ export class SpacexTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
@@ -165,6 +169,7 @@ export class SpacexTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {

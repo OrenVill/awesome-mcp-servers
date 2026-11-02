@@ -68,18 +68,11 @@ export class WikipediaTools {
     }
   }
 
-  static getSearchWikipediaSchema(): {
-    inputSchema: {
-      type: 'object';
-      properties: object;
-      required?: string[];
-      description?: string;
-      examples?: Record<string, unknown>[];
-    };
-  } {
+  static getSearchWikipediaSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description:
           'Use `query` for one search or `queries` for batch. Optional `limit`. Full JSON in `examples`.',
         examples: stringBatchInputExamples('query', {
@@ -108,6 +101,7 @@ export class WikipediaTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('title', defaultStringBatchOptions('title')),
         properties: {
@@ -121,6 +115,7 @@ export class WikipediaTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('title', defaultStringBatchOptions('title')),
         properties: {

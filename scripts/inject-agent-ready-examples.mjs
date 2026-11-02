@@ -156,7 +156,7 @@ function injectIntoFile(filePath) {
       searchFrom = typeIdx + marker.length;
       continue;
     }
-    const injection = `\n        description: AGENT_READY_BATCH_DESCRIPTION,\n        examples: ${expr},`;
+    const injection = `\n        additionalProperties: true,\n        description: AGENT_READY_BATCH_DESCRIPTION,\n        examples: ${expr},`;
     src = src.slice(0, typeIdx + marker.length) + injection + src.slice(typeIdx + marker.length);
     changed = true;
     searchFrom = typeIdx + marker.length + injection.length + 100;

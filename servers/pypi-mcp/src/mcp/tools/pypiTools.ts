@@ -86,6 +86,7 @@ export class PypiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: mergeInputExamples(
           stringBatchInputExamples('name', defaultStringBatchOptions('name')),
@@ -93,14 +94,6 @@ export class PypiTools {
         ),
         properties: {
           ...batchStringProperties('name', 'PyPI project name, e.g. "requests".'),
-          names: {
-            type: 'array',
-            items: { type: 'string' },
-            minItems: 1,
-            description:
-              'Batch PyPI project names. Full JSON in inputSchema.examples; batch-only: { "names": ["requests", "flask"] }.',
-            examples: [['requests', 'flask']],
-          },
         },
       },
     };
@@ -112,6 +105,7 @@ export class PypiTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           query: {
             type: 'string',

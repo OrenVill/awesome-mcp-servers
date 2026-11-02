@@ -68,6 +68,7 @@ export class SunriseSunsetTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: coordinateBatchInputExamples('lat', 'lng', { lonPlural: 'lngs' }),
         properties: {

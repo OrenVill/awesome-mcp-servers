@@ -55,6 +55,7 @@ export class GeocodingTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: stringBatchInputExamples('name', defaultStringBatchOptions('name')),
         properties: {

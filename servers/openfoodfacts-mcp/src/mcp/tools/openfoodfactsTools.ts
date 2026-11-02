@@ -110,6 +110,7 @@ export class OpenFoodFactsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: mergeInputExamples(
           stringBatchInputExamples('code', defaultStringBatchOptions('code')),
@@ -117,14 +118,6 @@ export class OpenFoodFactsTools {
         ),
         properties: {
           ...batchStringProperties('code', 'Product barcode (EAN-13, UPC, etc.).'),
-          codes: {
-            type: 'array',
-            items: { type: 'string' },
-            minItems: 1,
-            description:
-              'Alternative to `code`: list of barcodes. Full JSON in inputSchema.examples; batch-only: { "codes": ["3017620422003"] }.',
-            examples: [['3017620422003', '5000159407236']],
-          },
         },
       },
     };
@@ -136,6 +129,7 @@ export class OpenFoodFactsTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           search_terms: {
             type: 'string',

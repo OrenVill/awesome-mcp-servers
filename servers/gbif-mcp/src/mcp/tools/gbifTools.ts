@@ -101,6 +101,7 @@ export class GbifTools {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         description: AGENT_READY_BATCH_DESCRIPTION,
         examples: [
           { key: 2435090 },
@@ -109,16 +110,9 @@ export class GbifTools {
         properties: {
           key: {
             type: 'number',
-            description: 'Single GBIF taxon key (speciesKey or taxonKey from search results).',
-            examples: [2435090],
-          },
-          keys: {
-            type: 'array',
-            items: { type: 'number' },
-            minItems: 1,
             description:
-              'Batch GBIF taxon keys. Full request JSON is in inputSchema.examples; batch-only: { "keys": [2435090, 5219294] }.',
-            examples: [[2435090, 5219294]],
+              'Single GBIF taxon key. For batch keys array, see inputSchema.examples (additionalProperties allows `keys`).',
+            examples: [2435090],
           },
         },
       },
