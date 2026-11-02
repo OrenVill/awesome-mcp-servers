@@ -44,6 +44,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 
+- **@awesome-mcp/mcp-schema-helpers** — TypeScript resolves types from `src/` before `dist/` exists; `prepare` builds the package on `npm install`; root `npm run build` builds helpers first.
 - **rest-countries-mcp** — restore functionality after the upstream
   `restcountries.com/v3.1` API was deprecated/removed (it now 301-redirects to a
   deprecation notice, and v5 requires an API key). The service now sources the
