@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -82,10 +86,12 @@ export class OpenAlexTools {
     }
   }
 
-  static getSearchWorksSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchWorksSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text query to search OpenAlex works.'),
           per_page: {
@@ -100,10 +106,12 @@ export class OpenAlexTools {
     };
   }
 
-  static getGetWorkSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetWorkSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'OpenAlex work ID (W… or full openalex.org URL) or DOI (e.g. "10.1038/nature12373").'),
         },
@@ -111,10 +119,12 @@ export class OpenAlexTools {
     };
   }
 
-  static getSearchAuthorsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchAuthorsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text query to search OpenAlex authors.'),
           per_page: {
@@ -129,10 +139,12 @@ export class OpenAlexTools {
     };
   }
 
-  static getGetAuthorSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetAuthorSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'OpenAlex author ID (A… or full openalex.org URL).'),
         },

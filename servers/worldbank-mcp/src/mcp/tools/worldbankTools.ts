@@ -4,13 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
+  dualStringBatchInputExamples,
   formatInputFieldError,
   normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -240,7 +245,7 @@ export class WorldbankTools {
   }
 
   static getListCountriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
@@ -273,11 +278,13 @@ export class WorldbankTools {
   }
 
   static getSearchIndicatorsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search terms matched against indicator id and name.'),
           limit: {
@@ -297,11 +304,13 @@ export class WorldbankTools {
   }
 
   static getGetCountryIndicatorSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: dualStringBatchInputExamples('country_code', 'indicator_id', defaultStringBatchOptions('country_code'), defaultStringBatchOptions('indicator_id')),
         properties: {
           ...batchStringProperties('country_code', 'World Bank country id or ISO2 code.', {
             singularExample: 'usa',

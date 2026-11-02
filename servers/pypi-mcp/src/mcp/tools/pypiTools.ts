@@ -4,13 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
   normalizeToArray,
+  resolveNumberBatch,
+  mergeInputExamples,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -76,11 +81,16 @@ export class PypiTools {
   }
 
   static getGetPackageSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: mergeInputExamples(
+          stringBatchInputExamples('name', defaultStringBatchOptions('name')),
+          [{ names: ['requests', 'flask'] }]
+        ),
         properties: {
           ...batchStringProperties('name', 'PyPI project name, e.g. "requests".'),
           names: {
@@ -88,7 +98,8 @@ export class PypiTools {
             items: { type: 'string' },
             minItems: 1,
             description:
-              'Alternative batch field: list of PyPI project names (same as passing an array to `name`).',
+              'Batch PyPI project names. Full JSON in inputSchema.examples; batch-only: { "names": ["requests", "flask"] }.',
+            examples: [['requests', 'flask']],
           },
         },
       },
@@ -96,7 +107,7 @@ export class PypiTools {
   }
 
   static getSearchPackagesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {

@@ -4,14 +4,19 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
+  mergeInputExamples,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -108,11 +113,16 @@ export class WorldtimeTools {
   }
 
   static getGetTimeByTimezoneSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: mergeInputExamples(
+          stringBatchInputExamples('timezone', defaultStringBatchOptions('timezone')),
+          [{ timezones: ['Europe/Zurich', 'America/New_York'] }]
+        ),
         properties: {
           ...batchStringProperties('timezone', 'IANA timezone identifier (e.g. "Europe/London").'),
           timezones: {
@@ -120,7 +130,8 @@ export class WorldtimeTools {
             items: { type: 'string' },
             minItems: 1,
             description:
-              'Batch lookup: array of IANA timezone identifiers. When provided, takes precedence over `timezone`.',
+              'Batch lookup: array of IANA timezone identifiers. Full JSON in inputSchema.examples; batch-only: { "timezones": ["Europe/Zurich"] }.',
+            examples: [['Europe/Zurich', 'America/New_York']],
           },
         },
       },
@@ -128,7 +139,7 @@ export class WorldtimeTools {
   }
 
   static getGetTimeByIpSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
@@ -145,7 +156,7 @@ export class WorldtimeTools {
   }
 
   static getListTimezonesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {

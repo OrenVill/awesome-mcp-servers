@@ -4,14 +4,19 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  ownerRepoBatchExamples,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -101,26 +106,34 @@ export class GithubTools {
     }
   }
 
-  static getGetRepoSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetRepoSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: ownerRepoBatchExamples(),
         properties: {
           owner: {
             type: 'string',
             description: 'Repository owner login (user or organization), e.g. "vercel"',
+            examples: ['vercel', 'facebook'],
           },
-          ...batchStringProperties('repo', 'Repository name, e.g. "next.js".'),
+          ...batchStringProperties('repo', 'Repository name, e.g. "next.js".', {
+            singularExample: 'next.js',
+            pluralExample: ['next.js', 'swr'],
+          }),
         },
         required: ['owner'],
       },
     };
   }
 
-  static getGetUserSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetUserSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('username', defaultStringBatchOptions('username')),
         properties: {
           ...batchStringProperties('username', 'GitHub username or organization login, e.g. "torvalds".'),
         },
@@ -128,16 +141,22 @@ export class GithubTools {
     };
   }
 
-  static getListRepoIssuesSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getListRepoIssuesSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: ownerRepoBatchExamples(),
         properties: {
           owner: {
             type: 'string',
             description: 'Repository owner login',
+            examples: ['vercel'],
           },
-          ...batchStringProperties('repo', 'Repository name.'),
+          ...batchStringProperties('repo', 'Repository name.', {
+            singularExample: 'next.js',
+            pluralExample: ['next.js', 'swr'],
+          }),
           state: {
             type: 'string',
             description: 'Filter by issue state',
@@ -157,16 +176,22 @@ export class GithubTools {
     };
   }
 
-  static getListRepoReleasesSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getListRepoReleasesSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: ownerRepoBatchExamples(),
         properties: {
           owner: {
             type: 'string',
             description: 'Repository owner login',
+            examples: ['vercel'],
           },
-          ...batchStringProperties('repo', 'Repository name.'),
+          ...batchStringProperties('repo', 'Repository name.', {
+            singularExample: 'next.js',
+            pluralExample: ['next.js', 'swr'],
+          }),
           limit: {
             type: 'number',
             description: 'Maximum number of releases to return (1-100)',
@@ -180,10 +205,12 @@ export class GithubTools {
     };
   }
 
-  static getSearchReposSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchReposSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search query (supports qualifiers like `language:typescript stars:>1000 topic:cli`).'),
           limit: {

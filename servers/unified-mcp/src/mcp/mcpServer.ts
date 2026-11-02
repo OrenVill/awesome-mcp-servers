@@ -35,37 +35,57 @@ const SEARCH_TOOLS_DEF: Tool = {
 const EXECUTE_TOOLS_DEF: Tool = {
   name: 'execute_tools',
   description:
-    '⚡ Execute one or more bundled tools in a single call. Tools run in parallel; each result is returned in the same order with the tool name and either its content or an error message. Use search_tools first to discover tool names and argument schemas.',
+    '⚡ Execute one or more bundled tools in a single call. Tools run in parallel; each result is returned in the same order with the tool name and either its content or an error message. Use search_tools first to discover tool names and argument schemas. Request shape: { "tools": [ { "name": "<tool>", "arguments": { ... } } ] } — see inputSchema.examples.',
   inputSchema: {
     type: 'object',
+    description:
+      'Object with a `tools` array. Each element: { "name": string, "arguments"?: object }. Copy-paste full requests from `examples`.',
+    examples: [
+      {
+        tools: [{ name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } }],
+      },
+      {
+        tools: [
+          { name: 'get_country', arguments: { nameOrCode: 'France' } },
+          { name: 'search_wikipedia', arguments: { queries: ['Zurich', 'Bern'] } },
+        ],
+      },
+    ],
     properties: {
       tools: {
         type: 'array',
         description:
-          'Tools to execute in parallel. Each entry is { "name": string, "arguments"?: object }.',
+          'Tools to run in parallel. One element shape: { "name": "get_current_weather", "arguments": { "latitude": 47.37, "longitude": 8.54 } }. Full multi-tool requests are in inputSchema.examples.',
         minItems: 1,
-        examples: [
-          [
-            { name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } },
-            { name: 'search_wikipedia', arguments: { query: 'Zurich' } },
-          ],
-        ],
         items: {
           type: 'object',
+          description: 'Single tool call.',
+          additionalProperties: false,
           properties: {
             name: {
               type: 'string',
-              description: 'Tool name as returned by search_tools.',
-              examples: ['get_current_weather', 'search_wikipedia'],
+              description: 'Tool name from search_tools (e.g. get_current_weather).',
+              examples: ['get_current_weather', 'search_wikipedia', 'get_country'],
             },
             arguments: {
               type: 'object',
-              description: 'Arguments matching the tool\'s inputSchema.',
-              examples: [{ latitude: 47.37, longitude: 8.54 }],
+              description:
+                'Arguments for that tool (omit or {} if none). Example for weather: { "latitude": 47.37, "longitude": 8.54 }.',
+              examples: [
+                { latitude: 47.37, longitude: 8.54 },
+                { nameOrCode: 'France' },
+                { queries: ['Zurich'] },
+              ],
             },
           },
           required: ['name'],
+          examples: [
+            { name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } },
+          ],
         },
+        examples: [
+          [{ name: 'get_current_weather', arguments: { latitude: 47.37, longitude: 8.54 } }],
+        ],
       },
     },
     required: ['tools'],

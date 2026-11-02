@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { WikipediaService } from '../../services/wikipediaService.js';
@@ -64,12 +68,30 @@ export class WikipediaTools {
     }
   }
 
-  static getSearchWikipediaSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchWikipediaSchema(): {
+    inputSchema: {
+      type: 'object';
+      properties: object;
+      required?: string[];
+      description?: string;
+      examples?: Record<string, unknown>[];
+    };
+  } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description:
+          'Use `query` for one search or `queries` for batch. Optional `limit`. Full JSON in `examples`.',
+        examples: stringBatchInputExamples('query', {
+          singularExample: 'Zurich',
+          pluralExample: ['Zurich', 'Geneva'],
+          extra: [{ queries: ['Zurich', 'Geneva'], limit: 5 }],
+        }),
         properties: {
-          ...batchStringProperties('query', 'Search query to find Wikipedia articles.'),
+          ...batchStringProperties('query', 'Search query to find Wikipedia articles.', {
+            singularExample: 'Zurich',
+            pluralExample: ['Zurich', 'Geneva'],
+          }),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -82,10 +104,12 @@ export class WikipediaTools {
     };
   }
 
-  static getGetArticleSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetArticleSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('title', defaultStringBatchOptions('title')),
         properties: {
           ...batchStringProperties('title', 'Exact Wikipedia article title (e.g. "Albert Einstein").'),
         },
@@ -93,10 +117,12 @@ export class WikipediaTools {
     };
   }
 
-  static getGetSummarySchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetSummarySchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('title', defaultStringBatchOptions('title')),
         properties: {
           ...batchStringProperties('title', 'Exact Wikipedia article title for a brief summary.'),
         },

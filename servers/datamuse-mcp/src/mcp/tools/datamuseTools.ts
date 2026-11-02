@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { DatamuseService, type DatamuseWord } from '../../services/datamuseService.js';
@@ -87,10 +91,12 @@ export class DatamuseTools {
     }
   }
 
-  static getFindRhymesSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getFindRhymesSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'Word to find rhymes for (e.g. "moon").'),
           limit: {
@@ -105,10 +111,12 @@ export class DatamuseTools {
     };
   }
 
-  static getFindSynonymsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getFindSynonymsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'Word to find synonyms for (e.g. "happy").'),
           limit: {
@@ -123,10 +131,12 @@ export class DatamuseTools {
     };
   }
 
-  static getMeansLikeSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getMeansLikeSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Concept or phrase to search by meaning (multi-word allowed, e.g. "ringing in the ears").'),
           limit: {
@@ -141,10 +151,12 @@ export class DatamuseTools {
     };
   }
 
-  static getSoundsLikeSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSoundsLikeSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'Word whose sound you want to match (e.g. "jirraf").'),
           limit: {
@@ -159,10 +171,12 @@ export class DatamuseTools {
     };
   }
 
-  static getSuggestSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSuggestSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('prefix', defaultStringBatchOptions('prefix')),
         properties: {
           ...batchStringProperties('prefix', 'Prefix to autocomplete (e.g. "ele").'),
           limit: {

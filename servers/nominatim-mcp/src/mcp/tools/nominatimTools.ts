@@ -4,12 +4,17 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchCoordinateProperties,
+  batchStringProperties,
+  coordinateBatchInputExamples,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  resolveCoordinatePairs,
   normalizeStringArgFromArgs,
+  resolveCoordinatePairs,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -69,10 +74,12 @@ export class NominatimTools {
     }
   }
 
-  static getGeocodeSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGeocodeSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Address or place name to geocode (e.g. "1600 Pennsylvania Ave NW, Washington DC").'),
           limit: {
@@ -91,10 +98,12 @@ export class NominatimTools {
     };
   }
 
-  static getReverseGeocodeSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getReverseGeocodeSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('lat', 'lon'),
         properties: {
           ...batchCoordinateProperties('lat', 'lon'),
           zoom: {
@@ -109,7 +118,7 @@ export class NominatimTools {
     };
   }
 
-  static getLookupSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getLookupSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,

@@ -4,7 +4,11 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import { getConfig } from '../../config.js';
-import { exampleStringProperty } from '@awesome-mcp/mcp-schema-helpers';
+import {
+  exampleStringProperty,
+  AGENT_READY_BATCH_DESCRIPTION,
+  AgentReadyObjectInputSchema,
+} from '@awesome-mcp/mcp-schema-helpers';
 import {
   GbifService,
   type GbifOccurrence,
@@ -67,11 +71,13 @@ export class GbifTools {
   }
 
   static getSearchSpeciesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: 'Required search string `q`. Example requests are in `examples`.',
+        examples: [{ q: 'Panthera leo' }, { q: 'Homo sapiens', limit: 10 }],
         properties: {
           q: exampleStringProperty(
             'Free-text search query (scientific or vernacular name).',
@@ -90,21 +96,29 @@ export class GbifTools {
   }
 
   static getGetSpeciesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: [
+          { key: 2435090 },
+          { keys: [2435090, 5219294] },
+        ],
         properties: {
           key: {
             type: 'number',
             description: 'Single GBIF taxon key (speciesKey or taxonKey from search results).',
+            examples: [2435090],
           },
           keys: {
             type: 'array',
             items: { type: 'number' },
             minItems: 1,
-            description: 'Multiple GBIF taxon keys to fetch in one call.',
+            description:
+              'Batch GBIF taxon keys. Full request JSON is in inputSchema.examples; batch-only: { "keys": [2435090, 5219294] }.',
+            examples: [[2435090, 5219294]],
           },
         },
       },
@@ -112,7 +126,7 @@ export class GbifTools {
   }
 
   static getSearchOccurrencesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {

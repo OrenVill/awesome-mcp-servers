@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -72,10 +76,12 @@ export class MdnTools {
     }
   }
 
-  static getSearchMdnSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchMdnSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search query for MDN docs (e.g. "fetch", "css grid", "Array.map").'),
           locale: {
@@ -95,10 +101,12 @@ export class MdnTools {
     };
   }
 
-  static getGetDocSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetDocSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('slug', defaultStringBatchOptions('slug')),
         properties: {
           ...batchStringProperties('slug', 'MDN doc slug, e.g. "Web/API/fetch" or "Web/CSS/grid".'),
           locale: {
@@ -111,10 +119,12 @@ export class MdnTools {
     };
   }
 
-  static getGetBrowserCompatSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetBrowserCompatSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('slug', defaultStringBatchOptions('slug')),
         properties: {
           ...batchStringProperties('slug', 'MDN doc slug whose browser compatibility table you want.'),
           locale: {

@@ -4,14 +4,21 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultNumberBatchOptions,
+  defaultNumberBatchRange,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  numberBatchInputExamples,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -83,7 +90,7 @@ export class HackerNewsTools {
   }
 
   static getTopStoriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
@@ -109,11 +116,13 @@ export class HackerNewsTools {
   }
 
   static getStorySchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: numberBatchInputExamples('id', defaultNumberBatchRange('id'), defaultNumberBatchOptions('id')),
         properties: {
           ...batchNumberProperties(
             'id',
@@ -127,11 +136,13 @@ export class HackerNewsTools {
   }
 
   static getCommentsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: numberBatchInputExamples('storyId', defaultNumberBatchRange('storyId'), defaultNumberBatchOptions('storyId')),
         properties: {
           ...batchNumberProperties(
             'storyId',
@@ -160,11 +171,13 @@ export class HackerNewsTools {
   }
 
   static getSearchHNSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search query for Hacker News.'),
           hitsPerPage: {

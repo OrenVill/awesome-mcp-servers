@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -70,10 +74,12 @@ export class DictionaryTools {
     }
   }
 
-  static getDefineWordSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getDefineWordSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'The word to look up (e.g. "serendipity").'),
           lang: {
@@ -86,10 +92,12 @@ export class DictionaryTools {
     };
   }
 
-  static getGetSynonymsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetSynonymsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'The word to find synonyms for.'),
           lang: {
@@ -102,10 +110,12 @@ export class DictionaryTools {
     };
   }
 
-  static getGetPhoneticsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetPhoneticsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('word', defaultStringBatchOptions('word')),
         properties: {
           ...batchStringProperties('word', 'The word to get phonetics and audio for.'),
           lang: {

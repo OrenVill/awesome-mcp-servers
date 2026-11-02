@@ -15,7 +15,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Agent readiness** — tool `inputSchema` batch parameters use explicit singular/plural fields (e.g. `word` / `words`, `latitude` / `latitudes`) instead of ambiguous `oneOf` string-or-array schemas; validation errors name the field and suggest a next step.
 - **get_current_weather** — returns stable JSON (location, observed conditions, temperature, wind, precipitation) instead of markdown-only text.
 - **execute_tools** (unified-mcp) — documents the expected `tools` array shape with a concrete JSON example.
-- **Agent readiness (100 target)** — `batchCoordinateProperties` for lat/lon tools; JSON responses for `get_forecast`, `reverse_geocode`, `get_sun_times`, and `get_country_indicator`; `exampleStringProperty` for GBIF search; `execute_tools` / batch fields use JSON Schema `examples`; removed `required` on singular batch fields so plural-only calls validate (25+ tool files).
+- **Agent readiness (100 target)** — `batchCoordinateProperties` for lat/lon tools; JSON responses for `get_forecast`, `reverse_geocode`, `get_sun_times`, and `get_country_indicator`; `exampleStringProperty` for GBIF search; `execute_tools` / batch fields use JSON Schema `examples`; removed `required` on singular batch fields across tool servers (`scripts/strip-batch-singular-required.mjs`).
+- **Agent readiness (schema examples)** — root `inputSchema.description` + `inputSchema.examples` on all batch tools via `@awesome-mcp/mcp-schema-helpers` presets and `scripts/inject-agent-ready-examples.mjs` (fixes `complex-schema-simplified` on plural array params).
 
 ### Added
 

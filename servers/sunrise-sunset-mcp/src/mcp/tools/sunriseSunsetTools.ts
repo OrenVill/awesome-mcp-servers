@@ -4,10 +4,13 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
   batchCoordinateProperties,
+  coordinateBatchInputExamples,
   formatInputFieldError,
   resolveCoordinatePairs,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -60,11 +63,13 @@ export class SunriseSunsetTools {
   }
 
   static getGetSunTimesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('lat', 'lng', { lonPlural: 'lngs' }),
         properties: {
           ...batchCoordinateProperties('lat', 'lng', { lonPlural: 'lngs' }),
           date: {

@@ -7,7 +7,9 @@ import {
 import {
   BATCH_SEPARATOR,
   batchCoordinateProperties,
+  coordinateBatchInputExamples,
   formatInputFieldError,
+  AGENT_READY_BATCH_DESCRIPTION,
   resolveCoordinatePairs,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
@@ -91,10 +93,22 @@ export class WeatherTools {
     }
   }
 
-  static getCurrentWeatherSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getCurrentWeatherSchema(): {
+    inputSchema: {
+      type: 'object';
+      properties: object;
+      required?: string[];
+      description?: string;
+      examples?: Record<string, unknown>[];
+    };
+  } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('latitude', 'longitude', {
+          extra: [{ city: 'Zurich' }],
+        }),
         properties: {
           city: {
             type: 'string',
@@ -131,10 +145,22 @@ export class WeatherTools {
     };
   }
 
-  static getForecastSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getForecastSchema(): {
+    inputSchema: {
+      type: 'object';
+      properties: object;
+      required?: string[];
+      description?: string;
+      examples?: Record<string, unknown>[];
+    };
+  } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('latitude', 'longitude', {
+          extra: [{ city: 'Zurich', forecast_days: 7 }],
+        }),
         properties: {
           city: {
             type: 'string',
