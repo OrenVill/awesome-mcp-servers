@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { WikipediaService } from '../../services/wikipediaService.js';
 
@@ -38,30 +48,6 @@ export interface GetSummaryInput {
   title: string | string[];
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class WikipediaTools {
   private service: WikipediaService;
 
@@ -83,7 +69,7 @@ export class WikipediaTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Search query to find Wikipedia articles.'),
+          ...batchStringProperties('query', 'Search query to find Wikipedia articles.'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -102,7 +88,7 @@ export class WikipediaTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          title: stringOrArraySchema('Exact Wikipedia article title (e.g. "Albert Einstein").'),
+          ...batchStringProperties('title', 'Exact Wikipedia article title (e.g. "Albert Einstein").'),
         },
         required: ['title'],
       },
@@ -114,7 +100,7 @@ export class WikipediaTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          title: stringOrArraySchema('Exact Wikipedia article title for a brief summary.'),
+          ...batchStringProperties('title', 'Exact Wikipedia article title for a brief summary.'),
         },
         required: ['title'],
       },
@@ -122,7 +108,11 @@ export class WikipediaTools {
   }
 
   async executeSearchWikipedia(args: SearchWikipediaInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -165,7 +155,11 @@ export class WikipediaTools {
   }
 
   async executeGetArticle(args: GetArticleInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.title);
+    const titleBatch = normalizeStringArgFromArgs(args, 'title');
+    if ('field' in titleBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(titleBatch));
+    }
+    const { items, isBatch } = titleBatch;
     if (items.length === 0 || items.some((t) => !t || typeof t !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -213,7 +207,11 @@ export class WikipediaTools {
   }
 
   async executeGetSummary(args: GetSummaryInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.title);
+    const titleBatch = normalizeStringArgFromArgs(args, 'title');
+    if ('field' in titleBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(titleBatch));
+    }
+    const { items, isBatch } = titleBatch;
     if (items.length === 0 || items.some((t) => !t || typeof t !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

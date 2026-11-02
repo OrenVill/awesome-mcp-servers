@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { DatamuseService, type DatamuseWord } from '../../services/datamuseService.js';
 
@@ -62,30 +72,6 @@ export interface SuggestInput {
   limit?: number;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class DatamuseTools {
   private service: DatamuseService;
 
@@ -106,7 +92,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('Word to find rhymes for (e.g. "moon").'),
+          ...batchStringProperties('word', 'Word to find rhymes for (e.g. "moon").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -125,7 +111,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('Word to find synonyms for (e.g. "happy").'),
+          ...batchStringProperties('word', 'Word to find synonyms for (e.g. "happy").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -144,7 +130,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Concept or phrase to search by meaning (multi-word allowed, e.g. "ringing in the ears").'),
+          ...batchStringProperties('query', 'Concept or phrase to search by meaning (multi-word allowed, e.g. "ringing in the ears").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -163,7 +149,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          word: stringOrArraySchema('Word whose sound you want to match (e.g. "jirraf").'),
+          ...batchStringProperties('word', 'Word whose sound you want to match (e.g. "jirraf").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -182,7 +168,7 @@ export class DatamuseTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          prefix: stringOrArraySchema('Prefix to autocomplete (e.g. "ele").'),
+          ...batchStringProperties('prefix', 'Prefix to autocomplete (e.g. "ele").'),
           limit: {
             type: 'number',
             description: 'Maximum number of suggestions to return (1-50)',
@@ -197,7 +183,11 @@ export class DatamuseTools {
   }
 
   async executeFindRhymes(args: FindRhymesInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -225,7 +215,11 @@ export class DatamuseTools {
   }
 
   async executeFindSynonyms(args: FindSynonymsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -253,7 +247,11 @@ export class DatamuseTools {
   }
 
   async executeMeansLike(args: MeansLikeInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -281,7 +279,11 @@ export class DatamuseTools {
   }
 
   async executeSoundsLike(args: SoundsLikeInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.word);
+    const wordBatch = normalizeStringArgFromArgs(args, 'word');
+    if ('field' in wordBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(wordBatch));
+    }
+    const { items, isBatch } = wordBatch;
     if (items.length === 0 || items.some((w) => !w || typeof w !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -309,7 +311,11 @@ export class DatamuseTools {
   }
 
   async executeSuggest(args: SuggestInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.prefix);
+    const prefixBatch = normalizeStringArgFromArgs(args, 'prefix');
+    if ('field' in prefixBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(prefixBatch));
+    }
+    const { items, isBatch } = prefixBatch;
     if (items.length === 0 || items.some((p) => !p || typeof p !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

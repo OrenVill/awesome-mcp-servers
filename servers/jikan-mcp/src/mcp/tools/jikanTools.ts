@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   JikanService,
@@ -72,22 +82,7 @@ const TOP_FILTERS: JikanTopAnimeFilter[] = [
   'favorite',
 ];
 
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
 
 export class JikanTools {
   private service: JikanService;
@@ -112,7 +107,7 @@ export class JikanTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Search query (anime title or keywords).'),
+          ...batchStringProperties('query', 'Search query (anime title or keywords).'),
           limit: {
             type: 'number',
             description: 'Maximum results per query (1-25)',
@@ -182,7 +177,11 @@ export class JikanTools {
   }
 
   async executeSearchAnime(args: SearchAnimeInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

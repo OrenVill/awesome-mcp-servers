@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   FrankfurterService,
@@ -74,30 +84,6 @@ export type ListCurrenciesInput = Record<string, never>;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class FrankfurterTools {
   private service: FrankfurterService;
 
@@ -150,7 +136,7 @@ export class FrankfurterTools {
             type: 'string',
             description: 'Source currency ISO code, e.g. "USD".',
           },
-          to: stringOrArraySchema('Target currency ISO code, e.g. "EUR".'),
+          ...batchStringProperties('to', 'Target currency ISO code, e.g. "EUR".'),
         },
         required: ['amount', 'from', 'to'],
       },
@@ -164,7 +150,7 @@ export class FrankfurterTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          date: stringOrArraySchema('Date in YYYY-MM-DD format (e.g. "2020-01-15").'),
+          ...batchStringProperties('date', 'Date in YYYY-MM-DD format (e.g. "2020-01-15").'),
           base: {
             type: 'string',
             description: 'Base currency ISO code (default "EUR").',
@@ -250,7 +236,11 @@ export class FrankfurterTools {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'from is required and must be a string ISO code');
     }
 
-    const { items, isBatch } = normalizeToArray(args.to);
+    const toBatch = normalizeStringArgFromArgs(args, 'to');
+    if ('field' in toBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(toBatch));
+    }
+    const { items, isBatch } = toBatch;
     if (items.length === 0 || items.some((t) => !t || typeof t !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -311,7 +301,11 @@ export class FrankfurterTools {
   }
 
   async executeGetHistoricalRates(args: GetHistoricalRatesInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.date);
+    const dateBatch = normalizeStringArgFromArgs(args, 'date');
+    if ('field' in dateBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(dateBatch));
+    }
+    const { items, isBatch } = dateBatch;
     if (items.length === 0 || items.some((d) => !d || typeof d !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   HackerNewsService,
@@ -56,41 +66,6 @@ export interface SearchHNInput {
   page?: number;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
-function numberOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'number' },
-      { type: 'array', items: { type: 'number' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class HackerNewsTools {
   private service: HackerNewsService;
 
@@ -140,7 +115,11 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: numberOrArraySchema('Hacker News item ID (story, comment, job, etc.).'),
+          ...batchNumberProperties(
+            'id',
+            'Hacker News item ID (story, comment, job, etc.).',
+            { minimum: 1, maximum: 99999999999 }
+          ),
         },
         required: ['id'],
       },
@@ -154,7 +133,12 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          storyId: numberOrArraySchema('Story ID to fetch comments for.'),
+          ...batchNumberProperties(
+            'storyId',
+            'Story ID to fetch comments for.',
+            { minimum: 1, maximum: 99999999999 },
+            'storyIds'
+          ),
           maxDepth: {
             type: 'number',
             description: 'Maximum nesting depth for comment tree (default 3)',
@@ -182,7 +166,7 @@ export class HackerNewsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Search query for Hacker News.'),
+          ...batchStringProperties('query', 'Search query for Hacker News.'),
           hitsPerPage: {
             type: 'number',
             description: 'Number of results per page (1-100)',
@@ -227,13 +211,14 @@ export class HackerNewsTools {
   }
 
   async executeGetStory(args: GetStoryInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
-    if (items.length === 0 || items.some((id) => typeof id !== 'number' || id < 0)) {
-      return createMCPErrorResult(
-        MCPErrorCode.INVALID_INPUT,
-        'id must be a non-negative number or a non-empty array of non-negative numbers'
-      );
+    const idBatch = resolveNumberBatch(args, 'id', {
+      minimum: 1,
+      maximum: 99999999999,
+    });
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
     }
+    const { items, isBatch } = idBatch;
 
     const sections = await Promise.all(
       items.map(async (id) => {
@@ -257,14 +242,25 @@ export class HackerNewsTools {
   }
 
   async executeGetComments(args: GetCommentsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.storyId);
+    const storyIdBatch = resolveNumberBatch(args, 'storyId', {
+      minimum: 1,
+      maximum: 99999999999,
+    }, 'storyIds');
+    if ('field' in storyIdBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(storyIdBatch));
+    }
+    const { items, isBatch } = storyIdBatch;
     const maxDepth = Math.min(Math.max(args.maxDepth ?? 3, 1), 10);
     const maxComments = Math.min(Math.max(args.maxComments ?? 50, 1), 200);
 
-    if (items.length === 0 || items.some((sid) => typeof sid !== 'number' || sid < 0)) {
+    if (items.length === 0) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
-        'storyId must be a non-negative number or a non-empty array of non-negative numbers'
+        formatInputFieldError({
+          field: 'storyId',
+          message: 'At least one story ID is required.',
+          suggestion: 'Example: { "storyId": 8863 }.',
+        })
       );
     }
 
@@ -321,7 +317,11 @@ export class HackerNewsTools {
   }
 
   async executeSearchHN(args: SearchHNInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

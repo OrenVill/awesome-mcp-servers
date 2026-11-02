@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  resolveCoordinatePairs,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   NominatimService,
@@ -45,45 +55,6 @@ export interface LookupInput {
   osm_ids: string;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
-function numberOrArraySchema(description: string, range: { minimum: number; maximum: number }): object {
-  return {
-    oneOf: [
-      { type: 'number', minimum: range.minimum, maximum: range.maximum },
-      {
-        type: 'array',
-        items: { type: 'number', minimum: range.minimum, maximum: range.maximum },
-        minItems: 1,
-      },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class NominatimTools {
   private service: NominatimService;
 
@@ -105,9 +76,7 @@ export class NominatimTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema(
-            'Address or place name to geocode (e.g. "1600 Pennsylvania Ave NW, Washington DC").'
-          ),
+          ...batchStringProperties('query', 'Address or place name to geocode (e.g. "1600 Pennsylvania Ave NW, Washington DC").'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -130,11 +99,11 @@ export class NominatimTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          lat: numberOrArraySchema('Latitude in decimal degrees (-90 to 90).', {
+          ...batchNumberProperties('lat', 'Latitude in decimal degrees (-90 to 90).', {
             minimum: -90,
             maximum: 90,
           }),
-          lon: numberOrArraySchema('Longitude in decimal degrees (-180 to 180).', {
+          ...batchNumberProperties('lon', 'Longitude in decimal degrees (-180 to 180).', {
             minimum: -180,
             maximum: 180,
           }),
@@ -168,7 +137,11 @@ export class NominatimTools {
   }
 
   async executeGeocode(args: GeocodeInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -220,29 +193,17 @@ export class NominatimTools {
   }
 
   async executeReverseGeocode(args: ReverseGeocodeInput): Promise<MCPToolCallResult> {
-    const lat = normalizeToArray(args.lat);
-    const lon = normalizeToArray(args.lon);
-    const isBatch = lat.isBatch || lon.isBatch;
-
-    if (lat.items.length !== lon.items.length) {
-      return createMCPErrorResult(
-        MCPErrorCode.INVALID_INPUT,
-        `lat and lon must have the same number of values when batching (got ${lat.items.length} lat and ${lon.items.length} lon)`
-      );
+    const coord = resolveCoordinatePairs(
+      args,
+      'lat',
+      'lon',
+      { minimum: -90, maximum: 90 },
+      { minimum: -180, maximum: 180 }
+    );
+    if ('field' in coord) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(coord));
     }
-
-    const pairs = lat.items.map((latVal, i) => ({ lat: latVal, lon: lon.items[i] }));
-    if (pairs.length === 0) {
-      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat and lon are required');
-    }
-    for (const { lat: latVal, lon: lonVal } of pairs) {
-      if (typeof latVal !== 'number' || Number.isNaN(latVal) || latVal < -90 || latVal > 90) {
-        return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lat is required and must be a number between -90 and 90');
-      }
-      if (typeof lonVal !== 'number' || Number.isNaN(lonVal) || lonVal < -180 || lonVal > 180) {
-        return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'lon is required and must be a number between -180 and 180');
-      }
-    }
+    const { pairs, isBatch } = coord;
     if (args.zoom != null && (typeof args.zoom !== 'number' || args.zoom < 0 || args.zoom > 18)) {
       return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, 'zoom must be a number between 0 and 18');
     }

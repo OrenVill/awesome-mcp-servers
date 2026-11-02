@@ -41,9 +41,17 @@ export const CARECLINIC_MISSING_BEARER_MESSAGE =
 
 export function createMCPErrorResult(
   code: MCPErrorCode,
-  message: string
+  message: string,
+  options?: { field?: string; suggestion?: string }
 ): MCPToolCallResult {
+  let detail = message;
+  if (options?.field) {
+    detail = `Field "${options.field}": ${message}`;
+  }
+  if (options?.suggestion) {
+    detail += ` Next step: ${options.suggestion}`;
+  }
   return {
-    content: [{ type: 'text', text: `Error (${code}): ${message}` }],
+    content: [{ type: 'text', text: `Error (${code}): ${detail}` }],
   };
 }

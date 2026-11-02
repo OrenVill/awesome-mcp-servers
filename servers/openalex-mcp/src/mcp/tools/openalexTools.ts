@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   OpenAlexService,
@@ -54,22 +64,7 @@ export interface GetAuthorInput {
   id: string | string[];
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class OpenAlexTools {
   private service: OpenAlexService;
@@ -92,7 +87,7 @@ export class OpenAlexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text query to search OpenAlex works.'),
+          ...batchStringProperties('query', 'Free-text query to search OpenAlex works.'),
           per_page: {
             type: 'number',
             description: 'Number of results per page (1-200)',
@@ -111,9 +106,7 @@ export class OpenAlexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema(
-            'OpenAlex work ID (W… or full openalex.org URL) or DOI (e.g. "10.1038/nature12373").'
-          ),
+          ...batchStringProperties('id', 'OpenAlex work ID (W… or full openalex.org URL) or DOI (e.g. "10.1038/nature12373").'),
         },
         required: ['id'],
       },
@@ -125,7 +118,7 @@ export class OpenAlexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text query to search OpenAlex authors.'),
+          ...batchStringProperties('query', 'Free-text query to search OpenAlex authors.'),
           per_page: {
             type: 'number',
             description: 'Number of results per page (1-200)',
@@ -144,9 +137,7 @@ export class OpenAlexTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema(
-            'OpenAlex author ID (A… or full openalex.org URL).'
-          ),
+          ...batchStringProperties('id', 'OpenAlex author ID (A… or full openalex.org URL).'),
         },
         required: ['id'],
       },
@@ -154,7 +145,11 @@ export class OpenAlexTools {
   }
 
   async executeSearchWorks(args: SearchWorksInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -189,7 +184,11 @@ export class OpenAlexTools {
   }
 
   async executeGetWork(args: GetWorkInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((i) => !i || typeof i !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -216,7 +215,11 @@ export class OpenAlexTools {
   }
 
   async executeSearchAuthors(args: SearchAuthorsInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -251,7 +254,11 @@ export class OpenAlexTools {
   }
 
   async executeGetAuthor(args: GetAuthorInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((i) => !i || typeof i !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

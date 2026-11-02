@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   UsgsService,
@@ -68,30 +78,6 @@ export interface GetRecentSignificantInput {
 export interface GetEventInput {
   event_id: string | string[];
 }
-
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class UsgsTools {
   private service: UsgsService;
@@ -202,7 +188,7 @@ export class UsgsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          event_id: stringOrArraySchema('USGS event ID (e.g. "nc73649170").'),
+          ...batchStringProperties('event_id', 'USGS event ID (e.g. "nc73649170").'),
         },
         required: ['event_id'],
       },
@@ -297,7 +283,11 @@ export class UsgsTools {
   }
 
   async executeGetEvent(args: GetEventInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.event_id);
+    const event_idBatch = normalizeStringArgFromArgs(args, 'event_id');
+    if ('field' in event_idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(event_idBatch));
+    }
+    const { items, isBatch } = event_idBatch;
     if (
       items.length === 0 ||
       items.some((id) => !id || typeof id !== 'string')

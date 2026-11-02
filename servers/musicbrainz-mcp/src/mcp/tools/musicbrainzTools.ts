@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   MusicBrainzService,
@@ -59,22 +69,7 @@ export interface LookupArtistInput {
 const MBID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class MusicbrainzTools {
   private service: MusicBrainzService;
@@ -162,9 +157,7 @@ export class MusicbrainzTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          mbid: stringOrArraySchema(
-            'MusicBrainz artist ID (UUID, e.g. "a74b1b7f-71a5-4011-9341-f9781536e263").'
-          ),
+          ...batchStringProperties('mbid', 'MusicBrainz artist ID (UUID, e.g. "a74b1b7f-71a5-4011-9341-f9781536e263").'),
         },
         required: ['mbid'],
       },
@@ -256,7 +249,11 @@ export class MusicbrainzTools {
   }
 
   async executeLookupArtist(args: LookupArtistInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.mbid);
+    const mbidBatch = normalizeStringArgFromArgs(args, 'mbid');
+    if ('field' in mbidBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(mbidBatch));
+    }
+    const { items, isBatch } = mbidBatch;
     if (items.length === 0 || items.some((m) => !m || typeof m !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

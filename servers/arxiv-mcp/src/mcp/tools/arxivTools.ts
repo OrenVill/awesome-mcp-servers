@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { ArxivService, type ArxivPaper } from '../../services/arxivService.js';
 
@@ -40,30 +50,6 @@ export interface ListRecentInput {
   max_results?: number;
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class ArxivTools {
   private service: ArxivService;
 
@@ -86,7 +72,7 @@ export class ArxivTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text search query for arXiv papers.'),
+          ...batchStringProperties('query', 'Free-text search query for arXiv papers.'),
           max_results: {
             type: 'number',
             description: 'Maximum number of results to return (1-50)',
@@ -112,9 +98,7 @@ export class ArxivTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema(
-            'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format).'
-          ),
+          ...batchStringProperties('id', 'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format).'),
         },
         required: ['id'],
       },
@@ -147,7 +131,11 @@ export class ArxivTools {
   }
 
   async executeSearchArxiv(args: SearchArxivInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -191,7 +179,11 @@ export class ArxivTools {
   }
 
   async executeGetPaper(args: GetPaperInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((id) => !id || typeof id !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

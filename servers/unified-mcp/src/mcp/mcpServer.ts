@@ -42,7 +42,7 @@ const EXECUTE_TOOLS_DEF: Tool = {
       tools: {
         type: 'array',
         description:
-          'Tools to execute in parallel. Each entry is { name, arguments? }.',
+          'Tools to execute in parallel. Each entry is { "name": string, "arguments"?: object }. Example: { "tools": [{ "name": "get_current_weather", "arguments": { "latitude": 47.37, "longitude": 8.54 } }, { "name": "search_wikipedia", "arguments": { "query": "Zurich" } }] }',
         minItems: 1,
         items: {
           type: 'object',

@@ -3,6 +3,15 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   OpenFoodFactsService,
@@ -74,17 +83,6 @@ function normalizeBarcodes(args: GetProductByBarcodeInput): {
   return { items: [args.code], isBatch: false };
 }
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single barcode or an array for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class OpenFoodFactsTools {
   private service: OpenFoodFactsService;
@@ -108,7 +106,7 @@ export class OpenFoodFactsTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          code: stringOrArraySchema('Product barcode (EAN-13, UPC, etc.).'),
+          ...batchStringProperties('code', 'Product barcode (EAN-13, UPC, etc.).'),
           codes: {
             type: 'array',
             items: { type: 'string' },

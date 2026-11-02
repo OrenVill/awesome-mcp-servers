@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   WorldTimeService,
@@ -51,22 +61,7 @@ export interface GetTimeByIpInput {
 
 export type ListTimezonesInput = Record<string, never>;
 
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
 
 function resolveTimezoneItems(args: GetTimeByTimezoneInput): {
   items: string[];
@@ -86,7 +81,11 @@ function resolveTimezoneItems(args: GetTimeByTimezoneInput): {
     return null;
   }
 
-  const { items, isBatch } = normalizeToArray(args.timezone);
+  const timezoneBatch = normalizeStringArgFromArgs(args, 'timezone');
+  if ('field' in timezoneBatch) {
+    return null;
+  }
+  const { items, isBatch } = timezoneBatch;
   if (items.some((tz) => typeof tz !== 'string' || !tz.trim())) {
     return null;
   }
@@ -115,9 +114,7 @@ export class WorldtimeTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          timezone: stringOrArraySchema(
-            'IANA timezone identifier (e.g. "Europe/London").'
-          ),
+          ...batchStringProperties('timezone', 'IANA timezone identifier (e.g. "Europe/London").'),
           timezones: {
             type: 'array',
             items: { type: 'string' },

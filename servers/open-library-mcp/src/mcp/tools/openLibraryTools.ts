@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   OpenLibraryService,
@@ -56,30 +66,6 @@ export interface GetWorkInput {
   id: string | string[];
 }
 
-/**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
- */
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
-
-/** JSON-Schema fragment for a parameter that accepts a string or string[]. */
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
-
 export class OpenLibraryTools {
   private service: OpenLibraryService;
 
@@ -100,7 +86,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('Free-text search query (book title, keywords, etc.).'),
+          ...batchStringProperties('query', 'Free-text search query (book title, keywords, etc.).'),
           limit: {
             type: 'number',
             description: 'Maximum number of results to return (1-100)',
@@ -127,7 +113,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          isbn: stringOrArraySchema('ISBN-10 or ISBN-13 (hyphens allowed and stripped).'),
+          ...batchStringProperties('isbn', 'ISBN-10 or ISBN-13 (hyphens allowed and stripped).'),
         },
         required: ['isbn'],
       },
@@ -139,7 +125,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('Open Library author key (e.g. "OL23919A").'),
+          ...batchStringProperties('id', 'Open Library author key (e.g. "OL23919A").'),
         },
         required: ['id'],
       },
@@ -151,7 +137,7 @@ export class OpenLibraryTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          id: stringOrArraySchema('Open Library work key (e.g. "OL45804W").'),
+          ...batchStringProperties('id', 'Open Library work key (e.g. "OL45804W").'),
         },
         required: ['id'],
       },
@@ -159,7 +145,11 @@ export class OpenLibraryTools {
   }
 
   async executeSearchBooks(args: SearchBooksInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -196,7 +186,11 @@ export class OpenLibraryTools {
   }
 
   async executeGetBookByIsbn(args: GetBookByIsbnInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.isbn);
+    const isbnBatch = normalizeStringArgFromArgs(args, 'isbn');
+    if ('field' in isbnBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(isbnBatch));
+    }
+    const { items, isBatch } = isbnBatch;
     if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -235,7 +229,11 @@ export class OpenLibraryTools {
   }
 
   async executeGetAuthor(args: GetAuthorInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -274,7 +272,11 @@ export class OpenLibraryTools {
   }
 
   async executeGetWork(args: GetWorkInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.id);
+    const idBatch = normalizeStringArgFromArgs(args, 'id');
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
+    }
+    const { items, isBatch } = idBatch;
     if (items.length === 0 || items.some((v) => !v || typeof v !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,

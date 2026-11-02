@@ -3,6 +3,16 @@ import {
   createMCPErrorResult,
   MCPErrorCode,
 } from '../types/mcpTypes.js';
+import {
+  BATCH_SEPARATOR,
+  batchStringProperties,
+  batchNumberProperties,
+  resolveStringBatch,
+  resolveNumberBatch,
+  formatInputFieldError,
+  normalizeToArray,
+  normalizeStringArgFromArgs,
+} from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
   PubmedService,
@@ -74,22 +84,7 @@ export interface GetArticleAbstractInput {
   email?: string;
 }
 
-function normalizeToArray<T>(value: T | T[]): { items: T[]; isBatch: boolean } {
-  if (Array.isArray(value)) return { items: value, isBatch: true };
-  return { items: [value], isBatch: false };
-}
 
-function stringOrArraySchema(description: string): object {
-  return {
-    oneOf: [
-      { type: 'string' },
-      { type: 'array', items: { type: 'string' }, minItems: 1 },
-    ],
-    description: `${description} Accepts a single value or an array of values for batch requests.`,
-  };
-}
-
-const BATCH_SEPARATOR = '\n\n---\n\n';
 
 export class PubmedTools {
   private service: PubmedService;
@@ -115,7 +110,7 @@ export class PubmedTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          query: stringOrArraySchema('PubMed search query (supports PubMed query syntax).'),
+          ...batchStringProperties('query', 'PubMed search query (supports PubMed query syntax).'),
           max_results: {
             type: 'number',
             description: 'Maximum number of PMIDs to return (1-100)',
@@ -141,7 +136,7 @@ export class PubmedTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          pmid: stringOrArraySchema('PubMed ID (PMID), e.g. "35296578".'),
+          ...batchStringProperties('pmid', 'PubMed ID (PMID), e.g. "35296578".'),
           email: {
             type: 'string',
             description:
@@ -160,7 +155,7 @@ export class PubmedTools {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          pmid: stringOrArraySchema('PubMed ID (PMID), e.g. "35296578".'),
+          ...batchStringProperties('pmid', 'PubMed ID (PMID), e.g. "35296578".'),
           email: {
             type: 'string',
             description:
@@ -173,7 +168,11 @@ export class PubmedTools {
   }
 
   async executeSearchArticles(args: SearchArticlesInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.query);
+    const queryBatch = normalizeStringArgFromArgs(args, 'query');
+    if ('field' in queryBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(queryBatch));
+    }
+    const { items, isBatch } = queryBatch;
     if (items.length === 0 || items.some((q) => !q || typeof q !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -216,7 +215,11 @@ export class PubmedTools {
   }
 
   async executeGetArticleSummary(args: GetArticleSummaryInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.pmid);
+    const pmidBatch = normalizeStringArgFromArgs(args, 'pmid');
+    if ('field' in pmidBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(pmidBatch));
+    }
+    const { items, isBatch } = pmidBatch;
     if (items.length === 0 || items.some((p) => !p || typeof p !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
@@ -247,7 +250,11 @@ export class PubmedTools {
   }
 
   async executeGetArticleAbstract(args: GetArticleAbstractInput): Promise<MCPToolCallResult> {
-    const { items, isBatch } = normalizeToArray(args.pmid);
+    const pmidBatch = normalizeStringArgFromArgs(args, 'pmid');
+    if ('field' in pmidBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(pmidBatch));
+    }
+    const { items, isBatch } = pmidBatch;
     if (items.length === 0 || items.some((p) => !p || typeof p !== 'string')) {
       return createMCPErrorResult(
         MCPErrorCode.INVALID_INPUT,
