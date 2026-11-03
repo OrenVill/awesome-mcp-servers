@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -63,25 +67,28 @@ export class NpmRegistryTools {
   }
 
   static getGetPackageSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('name', defaultStringBatchOptions('name')),
         properties: {
           ...batchStringProperties('name', 'npm package name, e.g. "lodash" or "@types/node".'),
         },
-        required: ['name'],
       },
     };
   }
 
   static getSearchPackagesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           text: {
             type: 'string',

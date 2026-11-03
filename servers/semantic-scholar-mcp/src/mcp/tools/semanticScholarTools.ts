@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -101,11 +105,14 @@ export class SemanticScholarTools {
   }
 
   static getSearchPapersSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text search query.'),
           limit: {
@@ -116,17 +123,19 @@ export class SemanticScholarTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
 
   static getGetPaperSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('ids', defaultStringBatchOptions('ids')),
         properties: {
           paperId: {
             type: 'string',
@@ -140,11 +149,12 @@ export class SemanticScholarTools {
   }
 
   static getGetPaperCitationsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           paperId: {
             type: 'string',

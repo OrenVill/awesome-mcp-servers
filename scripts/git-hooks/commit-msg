@@ -1,0 +1,6 @@
+#!/bin/sh
+# Repo hook: strip Co-authored-by / Cursor trailers before a commit is created.
+# Enable once: git config core.hooksPath scripts/git-hooks
+MSG_FILE="$1"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+node "$ROOT/scripts/strip-cursor-from-commit-msg.mjs" < "$MSG_FILE" > "$MSG_FILE.tmp" && mv "$MSG_FILE.tmp" "$MSG_FILE"

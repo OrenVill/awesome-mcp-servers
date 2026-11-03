@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -83,11 +87,12 @@ export class WikidataTools {
   }
 
   static getSearchEntitiesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           search: {
             type: 'string',
@@ -112,11 +117,14 @@ export class WikidataTools {
   }
 
   static getGetEntitySchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'Wikidata entity id (e.g. Q937).'),
           language: {
@@ -125,17 +133,19 @@ export class WikidataTools {
             default: 'en',
           },
         },
-        required: ['id'],
       },
     };
   }
 
   static getGetEntityDescriptionSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'Wikidata entity id (e.g. Q937).'),
           language: {
@@ -144,7 +154,6 @@ export class WikidataTools {
             default: 'en',
           },
         },
-        required: ['id'],
       },
     };
   }

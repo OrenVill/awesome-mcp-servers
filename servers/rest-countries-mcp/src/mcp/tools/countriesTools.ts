@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { RestCountriesService } from '../../services/restCountriesService.js';
@@ -77,26 +81,36 @@ export class CountriesTools {
     }
   }
 
-  static getGetCountrySchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
-  } {
+  static getGetCountrySchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description:
+          'Use `nameOrCode` for one country or `namesOrCodes` for batch. Full JSON shapes are in `examples`.',
+        examples: stringBatchInputExamples('nameOrCode', {
+          singularExample: 'France',
+          pluralExample: ['France', 'Germany', 'pe'],
+        }),
         properties: {
-          ...batchStringProperties('nameOrCode', 'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").'),
+          ...batchStringProperties('nameOrCode', 'Country name (e.g. "peru", "United States") or alpha-2/alpha-3 code (e.g. "pe", "PE", "per").', {
+            singularExample: 'France',
+            pluralExample: ['France', 'Germany', 'pe'],
+          }),
         },
-        required: ['nameOrCode'],
       },
     };
   }
 
   static getSearchCountriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           searchType: {
             type: 'string',
@@ -105,17 +119,18 @@ export class CountriesTools {
           },
           ...batchStringProperties('query', 'Search value (e.g. "Europe", "South America", "Paris").'),
         },
-        required: ['searchType', 'query'],
+        required: ['searchType'],
       },
     };
   }
 
   static getListAllCountriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           fields: {
             type: 'string',

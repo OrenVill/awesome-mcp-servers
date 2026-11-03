@@ -4,14 +4,21 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultNumberBatchOptions,
+  defaultNumberBatchRange,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  numberBatchInputExamples,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -93,11 +100,14 @@ export class StackExchangeTools {
   }
 
   static getSearchQuestionsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search terms (supports Stack Exchange search syntax).'),
           site: {
@@ -113,31 +123,30 @@ export class StackExchangeTools {
             default: 15,
           },
         },
-        required: ['query'],
       },
     };
   }
 
   static getGetQuestionSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: numberBatchInputExamples('question_id', defaultNumberBatchRange('question_id'), defaultNumberBatchOptions('question_id')),
         properties: {
           ...batchNumberProperties(
             'question_id',
-            'Question ID on the site.',
+            'Stack Exchange question ID on the site (e.g. Stack Overflow).',
             { minimum: 1, maximum: 99999999999 },
-            'question_ids'
+            {
+              plural: 'question_ids',
+              singularExample: 11227958,
+              pluralExample: [11227958, 47718771],
+            }
           ),
-          ids: {
-            type: 'array',
-            items: { type: 'number', minimum: 1 },
-            minItems: 1,
-            description:
-              'Optional alias for `question_ids` when fetching multiple questions. Do not combine with `question_id`.',
-          },
           site: {
             type: 'string',
             description:
@@ -149,11 +158,12 @@ export class StackExchangeTools {
   }
 
   static getSearchTagsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           inname: {
             type: 'string',
@@ -211,24 +221,25 @@ export class StackExchangeTools {
   }
 
   async executeGetQuestion(args: GetQuestionInput): Promise<MCPToolCallResult> {
-    const rawIds = args.question_id ?? args.ids;
-    if (rawIds === undefined || rawIds === null) {
-      return createMCPErrorResult(
-        MCPErrorCode.INVALID_INPUT,
-        'question_id or ids is required (number or array of numbers)'
-      );
+    let idBatch = resolveNumberBatch(
+      args,
+      'question_id',
+      { minimum: 1, maximum: 99999999999 },
+      'question_ids'
+    );
+    if ('field' in idBatch && args.ids !== undefined && args.ids !== null) {
+      const legacy = normalizeToArray(args.ids);
+      if (
+        legacy.items.length > 0 &&
+        !legacy.items.some((id) => typeof id !== 'number' || !Number.isFinite(id) || id <= 0)
+      ) {
+        idBatch = { items: legacy.items.map((id) => Math.floor(id)), isBatch: legacy.isBatch };
+      }
     }
-
-    const { items, isBatch } = normalizeToArray(rawIds);
-    if (
-      items.length === 0 ||
-      items.some((id) => typeof id !== 'number' || !Number.isFinite(id) || id <= 0)
-    ) {
-      return createMCPErrorResult(
-        MCPErrorCode.INVALID_INPUT,
-        'question IDs must be positive numbers'
-      );
+    if ('field' in idBatch) {
+      return createMCPErrorResult(MCPErrorCode.INVALID_INPUT, formatInputFieldError(idBatch));
     }
+    const { items, isBatch } = idBatch;
 
     try {
       const result = await this.service.getQuestions({

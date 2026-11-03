@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -95,28 +99,31 @@ export class SpacexTools {
     }
   }
 
-  static getGetLatestLaunchSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetLatestLaunchSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };
   }
 
-  static getGetNextLaunchSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetNextLaunchSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };
   }
 
-  static getListLaunchesSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getListLaunchesSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           upcoming: {
             type: 'boolean',
@@ -144,26 +151,30 @@ export class SpacexTools {
     };
   }
 
-  static getGetLaunchSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetLaunchSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'SpaceX launch id (e.g. "5eb87cd9ffd86e000604b32a").'),
         },
-        required: ['id'],
       },
     };
   }
 
-  static getGetRocketSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetRocketSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'SpaceX rocket id (e.g. "5e9d0d95eda69973a809d1ec").'),
         },
-        required: ['id'],
       },
     };
   }

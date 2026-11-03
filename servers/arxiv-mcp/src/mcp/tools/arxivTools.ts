@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { ArxivService, type ArxivPaper } from '../../services/arxivService.js';
@@ -66,11 +70,14 @@ export class ArxivTools {
   }
 
   static getSearchArxivSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text search query for arXiv papers.'),
           max_results: {
@@ -86,31 +93,33 @@ export class ArxivTools {
               'Optional arXiv category filter (e.g. "cs.AI", "stat.ML", "math.AG")',
           },
         },
-        required: ['query'],
       },
     };
   }
 
   static getGetPaperSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'arXiv ID, e.g. "2401.12345" (new format) or "cs/0301001" (old format).'),
         },
-        required: ['id'],
       },
     };
   }
 
   static getListRecentSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           category: {
             type: 'string',

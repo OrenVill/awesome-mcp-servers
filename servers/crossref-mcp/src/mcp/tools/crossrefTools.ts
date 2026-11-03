@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -82,22 +86,27 @@ export class CrossrefTools {
     }
   }
 
-  static getGetWorkSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetWorkSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('doi', defaultStringBatchOptions('doi')),
         properties: {
           ...batchStringProperties('doi', 'DOI of the work to look up (e.g. "10.1038/nphys1170").'),
         },
-        required: ['doi'],
       },
     };
   }
 
-  static getSearchWorksSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchWorksSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text query to search Crossref works.'),
           limit: {
@@ -113,15 +122,17 @@ export class CrossrefTools {
               'Optional Crossref filter expression, e.g. "from-pub-date:2020" or "type:journal-article"',
           },
         },
-        required: ['query'],
       },
     };
   }
 
-  static getSearchJournalsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchJournalsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Query to search journals by title or keywords.'),
           limit: {
@@ -132,19 +143,20 @@ export class CrossrefTools {
             default: 10,
           },
         },
-        required: ['query'],
       },
     };
   }
 
-  static getGetJournalSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetJournalSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('issn', defaultStringBatchOptions('issn')),
         properties: {
           ...batchStringProperties('issn', 'ISSN of the journal (e.g. "2167-8359").'),
         },
-        required: ['issn'],
       },
     };
   }

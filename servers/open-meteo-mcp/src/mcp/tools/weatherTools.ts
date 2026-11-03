@@ -6,13 +6,12 @@ import {
 } from '../types/mcpTypes.js';
 import {
   BATCH_SEPARATOR,
-  batchStringProperties,
-  batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchCoordinateProperties,
+  coordinateBatchInputExamples,
   formatInputFieldError,
+  AGENT_READY_BATCH_DESCRIPTION,
   resolveCoordinatePairs,
-  normalizeToArray,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
@@ -76,14 +75,8 @@ export interface GetForecastInput {
 }
 
 /**
- * Normalize a scalar-or-array input into an array plus a flag telling whether
- * the caller supplied a batch. Single-value callers keep their original
- * behaviour (one result, no batch separators); array callers get one section
- * per item joined by a horizontal rule.
+ * Resolve locations from city geocoding or explicit latitude/longitude (single or batch).
  */
-
-/** JSON-Schema fragment for a parameter that accepts a number or number[]. */
-
 
 export class WeatherTools {
   private service: OpenMeteoService;
@@ -101,18 +94,23 @@ export class WeatherTools {
     }
   }
 
-  static getCurrentWeatherSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getCurrentWeatherSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('latitude', 'longitude', {
+          extra: [{ city: 'Zurich' }],
+        }),
         properties: {
           city: {
             type: 'string',
             description:
               'City name (e.g. "Berlin", "New York", "Tokyo"). When provided, coordinates are resolved automatically via Open-Meteo geocoding. Use this OR latitude+longitude.',
+            examples: ['Zurich', 'Berlin'],
           },
-          ...batchNumberProperties('latitude', 'Latitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `longitude` (equal length).', { minimum: -90, maximum: 90 }),
-          ...batchNumberProperties('longitude', 'Longitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `latitude` (equal length).', { minimum: -180, maximum: 180 }),
+          ...batchCoordinateProperties('latitude', 'longitude'),
           timezone: {
             type: 'string',
             description: 'Timezone (e.g. Europe/Berlin, America/New_York) or "auto"',
@@ -141,18 +139,23 @@ export class WeatherTools {
     };
   }
 
-  static getForecastSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getForecastSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: coordinateBatchInputExamples('latitude', 'longitude', {
+          extra: [{ city: 'Zurich', forecast_days: 7 }],
+        }),
         properties: {
           city: {
             type: 'string',
             description:
               'City name (e.g. "Berlin", "New York", "Tokyo"). When provided, coordinates are resolved automatically via Open-Meteo geocoding. Use this OR latitude+longitude.',
+            examples: ['Zurich', 'Berlin'],
           },
-          ...batchNumberProperties('latitude', 'Latitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `longitude` (equal length).', { minimum: -90, maximum: 90 }),
-          ...batchNumberProperties('longitude', 'Longitude (WGS84). Required if `city` is not provided. For batch requests pass an array paired positionally with `latitude` (equal length).', { minimum: -180, maximum: 180 }),
+          ...batchCoordinateProperties('latitude', 'longitude'),
           forecast_days: {
             type: 'number',
             description: 'Number of forecast days (1-16)',
@@ -290,7 +293,7 @@ export class WeatherTools {
         }
 
         const data = response as unknown as Record<string, unknown>;
-        const text = this.formatForecastAsText(data, label);
+        const text = this.formatForecastAsJson(data, label);
         const content: MCPContentItem[] = [{ type: 'text', text }];
         if (args.include_html_card === true) {
           content.push({
@@ -327,7 +330,7 @@ export class WeatherTools {
             return `# Weather Forecast (${lat}, ${lon})\n\nForecast fetch failed: ${response.reason}`;
           }
           const data = response as unknown as Record<string, unknown>;
-          return this.formatForecastAsText(data, label);
+          return this.formatForecastAsJson(data, label);
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Unknown error';
           return `# Weather Forecast (${lat}, ${lon})\n\nForecast fetch failed: ${message}`;
@@ -425,6 +428,64 @@ export class WeatherTools {
 
   private formatCurrentWeatherAsJson(response: Record<string, unknown>, label?: string): string {
     return JSON.stringify(this.buildCurrentWeatherObject(response, label), null, 2);
+  }
+
+  private buildForecastObject(response: Record<string, unknown>, label?: string): Record<string, unknown> {
+    const daily = response.daily as Record<string, unknown[]> | undefined;
+    const timezone = (response.timezone as string) ?? 'UTC';
+    const latitude = response.latitude as number;
+    const longitude = response.longitude as number;
+    const current = response.current as Record<string, unknown> | undefined;
+
+    if (!daily || !daily.time) {
+      return {
+        error: 'no_forecast_data',
+        location: { label: label ?? null, latitude, longitude, timezone },
+      };
+    }
+
+    const times = daily.time as string[];
+    const maxTemps = (daily.temperature_2m_max ?? []) as number[];
+    const minTemps = (daily.temperature_2m_min ?? []) as number[];
+    const precipSum = (daily.precipitation_sum ?? []) as number[];
+    const precipProb = (daily.precipitation_probability_max ?? []) as number[];
+    const weatherCodes = (daily.weather_code ?? []) as number[];
+    const windMax = (daily.wind_speed_10m_max ?? []) as number[];
+
+    const days = times.map((date, i) => ({
+      date,
+      weather_code: weatherCodes[i] ?? null,
+      conditions: this.weatherCodeToDescription(weatherCodes[i] ?? 0),
+      temperature_max_celsius: maxTemps[i] ?? null,
+      temperature_min_celsius: minTemps[i] ?? null,
+      precipitation_sum_mm: precipSum[i] ?? null,
+      precipitation_probability_max_percent: precipProb[i] ?? null,
+      wind_speed_max_kmh: windMax[i] ?? null,
+      sunrise: (daily.sunrise as string[] | undefined)?.[i] ?? null,
+      sunset: (daily.sunset as string[] | undefined)?.[i] ?? null,
+    }));
+
+    return {
+      location: {
+        label: label ?? null,
+        latitude,
+        longitude,
+        timezone,
+      },
+      now: current
+        ? {
+            temperature_celsius: current.temperature_2m ?? null,
+            weather_code: current.weather_code ?? null,
+            conditions: this.weatherCodeToDescription((current.weather_code as number) ?? 0),
+          }
+        : null,
+      forecast_days: days.length,
+      daily: days,
+    };
+  }
+
+  private formatForecastAsJson(response: Record<string, unknown>, label?: string): string {
+    return JSON.stringify(this.buildForecastObject(response, label), null, 2);
   }
 
   private formatCurrentWeatherAsText(response: Record<string, unknown>, label?: string): string {

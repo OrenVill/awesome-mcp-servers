@@ -5,14 +5,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import { OpenMeteoService } from '../../services/openMeteoService.js';
@@ -47,10 +51,13 @@ export class GeocodingTools {
     }
   }
 
-  static getSearchLocationsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchLocationsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('name', defaultStringBatchOptions('name')),
         properties: {
           ...batchStringProperties('name', 'Location name or postal code to search for (min 2 characters).'),
           count: {
@@ -71,7 +78,6 @@ export class GeocodingTools {
             pattern: '^[A-Za-z]{2}$',
           },
         },
-        required: ['name'],
       },
     };
   }

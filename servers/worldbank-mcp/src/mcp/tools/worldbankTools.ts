@@ -4,13 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
+  dualStringBatchInputExamples,
   formatInputFieldError,
   normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -152,6 +157,43 @@ function formatSeriesAsText(
   return `**${title}** — ${countryName} (\`${countryCode}\` / \`${indicatorId}\`)\n\n${valueLines.join('\n')}`;
 }
 
+function formatSeriesAsJson(
+  countryCode: string,
+  indicatorId: string,
+  series: WBCountryIndicatorRow[],
+  dateFilter?: string
+): string {
+  if (series.length === 0) {
+    return JSON.stringify(
+      {
+        country_code: countryCode,
+        indicator_id: indicatorId,
+        date_filter: dateFilter ?? null,
+        observations: [],
+        message: 'no_data',
+      },
+      null,
+      2
+    );
+  }
+
+  const sample = series[0];
+  const rows = [...series].sort((a, b) => Number(b.date) - Number(a.date));
+  const payload = {
+    country_code: countryCode,
+    country_name: sample.country?.value ?? countryCode,
+    indicator_id: indicatorId,
+    indicator_name: sample.indicator?.value ?? indicatorId,
+    date_filter: dateFilter ?? null,
+    observations: rows.map((row) => ({
+      date: row.date,
+      value: row.value,
+      unit: row.unit ?? null,
+    })),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
 function resolveIndicatorPairs(
   countryCode: string | string[],
   indicatorId: string | string[]
@@ -203,11 +245,12 @@ export class WorldbankTools {
   }
 
   static getListCountriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           page: {
             type: 'integer',
@@ -236,11 +279,14 @@ export class WorldbankTools {
   }
 
   static getSearchIndicatorsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Search terms matched against indicator id and name.'),
           limit: {
@@ -255,24 +301,33 @@ export class WorldbankTools {
               'World Bank data source id (default 2 = World Development Indicators).',
           },
         },
-        required: ['query'],
       },
     };
   }
 
   static getGetCountryIndicatorSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: dualStringBatchInputExamples('country_code', 'indicator_id', defaultStringBatchOptions('country_code'), defaultStringBatchOptions('indicator_id')),
         properties: {
-          ...batchStringProperties('country_code', 'World Bank country id or ISO2 code (e.g. us, USA, IND).'),
-          ...batchStringProperties('indicator_id', 'Indicator id (e.g. SP.POP.TOTL, NY.GDP.MKTP.CD).'),
+          ...batchStringProperties('country_code', 'World Bank country id or ISO2 code.', {
+            singularExample: 'usa',
+            pluralExample: ['usa', 'deu'],
+          }),
+          ...batchStringProperties('indicator_id', 'Indicator id from search_indicators.', {
+            singularExample: 'SP.POP.TOTL',
+            pluralExample: ['SP.POP.TOTL', 'NY.GDP.MKTP.CD'],
+          }),
           date: {
             type: 'string',
             description:
-              'Optional year (YYYY) or inclusive range (YYYY:YYYY) passed to the World Bank API.',
+              'Optional year (YYYY) or inclusive range (YYYY:YYYY) passed to the World Bank API. Example: "2020" or "2000:2020".',
+            examples: ['2020', '2000:2020'],
           },
           per_page: {
             type: 'integer',
@@ -281,7 +336,6 @@ export class WorldbankTools {
             description: 'Max observations to return (default 500).',
           },
         },
-        required: ['country_code', 'indicator_id'],
       },
     };
   }
@@ -369,7 +423,7 @@ export class WorldbankTools {
           perPage: input.per_page,
         });
         sections.push(
-          formatSeriesAsText(
+          formatSeriesAsJson(
             result.countryCode,
             result.indicatorId,
             result.series,

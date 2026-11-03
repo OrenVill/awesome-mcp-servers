@@ -4,13 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
   normalizeToArray,
+  mergeInputExamples,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -100,30 +105,31 @@ export class OpenFoodFactsTools {
   }
 
   static getGetProductByBarcodeSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: mergeInputExamples(
+          stringBatchInputExamples('code', defaultStringBatchOptions('code')),
+          [{ codes: ['3017620422003', '5000159407236'] }]
+        ),
         properties: {
           ...batchStringProperties('code', 'Product barcode (EAN-13, UPC, etc.).'),
-          codes: {
-            type: 'array',
-            items: { type: 'string' },
-            minItems: 1,
-            description: 'Alternative to `code`: list of barcodes to fetch in one call.',
-          },
         },
       },
     };
   }
 
   static getSearchProductsSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           search_terms: {
             type: 'string',

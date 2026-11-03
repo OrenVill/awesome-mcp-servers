@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -104,11 +108,14 @@ export class PubmedTools {
   }
 
   static getSearchArticlesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'PubMed search query (supports PubMed query syntax).'),
           max_results: {
@@ -124,17 +131,19 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['query'],
       },
     };
   }
 
   static getGetArticleSummarySchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('pmid', defaultStringBatchOptions('pmid')),
         properties: {
           ...batchStringProperties('pmid', 'PubMed ID (PMID), e.g. "35296578".'),
           email: {
@@ -143,17 +152,19 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['pmid'],
       },
     };
   }
 
   static getGetArticleAbstractSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('pmid', defaultStringBatchOptions('pmid')),
         properties: {
           ...batchStringProperties('pmid', 'PubMed ID (PMID), e.g. "35296578".'),
           email: {
@@ -162,7 +173,6 @@ export class PubmedTools {
               'Optional contact email for NCBI E-utilities etiquette (overrides PUBMED_EMAIL for this request).',
           },
         },
-        required: ['pmid'],
       },
     };
   }

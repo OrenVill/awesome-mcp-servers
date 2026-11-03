@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -100,11 +104,12 @@ export class FrankfurterTools {
   }
 
   static getGetLatestRatesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           base: {
             type: 'string',
@@ -121,11 +126,14 @@ export class FrankfurterTools {
   }
 
   static getConvertCurrencySchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('to', defaultStringBatchOptions('to')),
         properties: {
           amount: {
             type: 'number',
@@ -138,17 +146,20 @@ export class FrankfurterTools {
           },
           ...batchStringProperties('to', 'Target currency ISO code, e.g. "EUR".'),
         },
-        required: ['amount', 'from', 'to'],
+        required: ['amount', 'from'],
       },
     };
   }
 
   static getGetHistoricalRatesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('date', defaultStringBatchOptions('date')),
         properties: {
           ...batchStringProperties('date', 'Date in YYYY-MM-DD format (e.g. "2020-01-15").'),
           base: {
@@ -160,17 +171,17 @@ export class FrankfurterTools {
             description: 'Comma-separated target currency ISO codes.',
           },
         },
-        required: ['date'],
       },
     };
   }
 
   static getGetTimeSeriesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           start_date: {
             type: 'string',
@@ -197,11 +208,12 @@ export class FrankfurterTools {
   }
 
   static getListCurrenciesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };

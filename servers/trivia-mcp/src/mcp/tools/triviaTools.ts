@@ -1,3 +1,4 @@
+import type { AgentReadyObjectInputSchema } from '@awesome-mcp/mcp-schema-helpers';
 import {
   MCPToolCallResult,
   createMCPErrorResult,
@@ -78,10 +79,11 @@ export class TriviaTools {
     }
   }
 
-  static getGetQuestionsSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetQuestionsSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           amount: {
             type: 'number',
@@ -109,19 +111,21 @@ export class TriviaTools {
     };
   }
 
-  static getListCategoriesSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getListCategoriesSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {},
       },
     };
   }
 
-  static getGetCategoryCountSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetCategoryCountSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
         properties: {
           category: {
             type: 'number',

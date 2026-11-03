@@ -4,14 +4,18 @@ import {
   MCPErrorCode,
 } from '../types/mcpTypes.js';
 import {
+  AGENT_READY_BATCH_DESCRIPTION,
   BATCH_SEPARATOR,
-  batchStringProperties,
   batchNumberProperties,
-  resolveStringBatch,
-  resolveNumberBatch,
+  batchStringProperties,
+  defaultStringBatchOptions,
   formatInputFieldError,
-  normalizeToArray,
   normalizeStringArgFromArgs,
+  normalizeToArray,
+  resolveNumberBatch,
+  resolveStringBatch,
+  stringBatchInputExamples,
+  AgentReadyObjectInputSchema,
 } from '@awesome-mcp/mcp-schema-helpers';
 import { getConfig } from '../../config.js';
 import {
@@ -81,10 +85,13 @@ export class OpenLibraryTools {
     }
   }
 
-  static getSearchBooksSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getSearchBooksSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('query', defaultStringBatchOptions('query')),
         properties: {
           ...batchStringProperties('query', 'Free-text search query (book title, keywords, etc.).'),
           limit: {
@@ -103,43 +110,48 @@ export class OpenLibraryTools {
             description: 'Optional exact title filter',
           },
         },
-        required: ['query'],
       },
     };
   }
 
-  static getGetBookByIsbnSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetBookByIsbnSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('isbn', defaultStringBatchOptions('isbn')),
         properties: {
           ...batchStringProperties('isbn', 'ISBN-10 or ISBN-13 (hyphens allowed and stripped).'),
         },
-        required: ['isbn'],
       },
     };
   }
 
-  static getGetAuthorSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetAuthorSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'Open Library author key (e.g. "OL23919A").'),
         },
-        required: ['id'],
       },
     };
   }
 
-  static getGetWorkSchema(): { inputSchema: { type: 'object'; properties: object; required?: string[] } } {
+  static getGetWorkSchema(): { inputSchema: AgentReadyObjectInputSchema } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: stringBatchInputExamples('id', defaultStringBatchOptions('id')),
         properties: {
           ...batchStringProperties('id', 'Open Library work key (e.g. "OL45804W").'),
         },
-        required: ['id'],
       },
     };
   }

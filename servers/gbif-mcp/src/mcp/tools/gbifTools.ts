@@ -5,6 +5,11 @@ import {
 } from '../types/mcpTypes.js';
 import { getConfig } from '../../config.js';
 import {
+  exampleStringProperty,
+  AGENT_READY_BATCH_DESCRIPTION,
+  AgentReadyObjectInputSchema,
+} from '@awesome-mcp/mcp-schema-helpers';
+import {
   GbifService,
   type GbifOccurrence,
   type GbifSpeciesDetail,
@@ -66,16 +71,18 @@ export class GbifTools {
   }
 
   static getSearchSpeciesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        description: 'Required search string `q`. Example requests are in `examples`.',
+        examples: [{ q: 'Panthera leo' }, { q: 'Homo sapiens', limit: 10 }],
         properties: {
-          q: {
-            type: 'string',
-            description: 'Free-text search query (scientific or vernacular name, e.g. "Panthera leo" or "lion").',
-          },
+          q: exampleStringProperty(
+            'Free-text search query (scientific or vernacular name).',
+            'Panthera leo'
+          ),
           limit: {
             type: 'number',
             description: 'Maximum number of species results (1-300)',
@@ -84,27 +91,28 @@ export class GbifTools {
             default: 20,
           },
         },
-        required: ['q'],
       },
     };
   }
 
   static getGetSpeciesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
+        additionalProperties: true,
+        description: AGENT_READY_BATCH_DESCRIPTION,
+        examples: [
+          { key: 2435090 },
+          { keys: [2435090, 5219294] },
+        ],
         properties: {
           key: {
             type: 'number',
-            description: 'Single GBIF taxon key (speciesKey or taxonKey from search results).',
-          },
-          keys: {
-            type: 'array',
-            items: { type: 'number' },
-            minItems: 1,
-            description: 'Multiple GBIF taxon keys to fetch in one call.',
+            description:
+              'Single GBIF taxon key. For batch keys array, see inputSchema.examples (additionalProperties allows `keys`).',
+            examples: [2435090],
           },
         },
       },
@@ -112,16 +120,13 @@ export class GbifTools {
   }
 
   static getSearchOccurrencesSchema(): {
-    inputSchema: { type: 'object'; properties: object; required?: string[] };
+    inputSchema: AgentReadyObjectInputSchema;
   } {
     return {
       inputSchema: {
         type: 'object' as const,
         properties: {
-          scientificName: {
-            type: 'string',
-            description: 'Scientific name to match (e.g. "Homo sapiens").',
-          },
+          scientificName: exampleStringProperty('Scientific name to match.', 'Homo sapiens'),
           country: {
             type: 'string',
             description: 'Optional ISO 3166-1 alpha-2 country code filter (e.g. "US", "GB").',
@@ -134,7 +139,6 @@ export class GbifTools {
             default: 20,
           },
         },
-        required: ['scientificName'],
       },
     };
   }
